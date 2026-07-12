@@ -89,14 +89,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-button.secondary {
-  background: #374151;
-}
-
-button.secondary:hover:not(:disabled) {
-  background: #4b5563;
-}
-
 .log {
   margin-top: 0.75rem;
   background: var(--log-bg);
@@ -109,10 +101,4 @@ button.secondary:hover:not(:disabled) {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 0.85rem;
   white-space: pre-wrap;
-}
-
-.hint {
-  margin: 0.5rem 0 0;
-  color: var(--muted);
-  font-size: 0.85rem;
 }
