@@ -9,6 +9,7 @@ Public, runnable feature demos for every Zixflow analytics SDK. Use these to ver
 | Folder | SDK package | Credential |
 |--------|-------------|------------|
 | [`javascript/`](./javascript) | `@zixflow/analytics-browser` | Write key |
+| [`react/`](./react) | `@zixflow/analytics-browser` (Vite + React) | Write key |
 | [`nodejs/`](./nodejs) | `@zixflow/analytics-node` | Write key |
 | [`react-native/`](./react-native) | `zixflow-reactnative` | API key |
 | [`flutter/`](./flutter) | `zixflow` (pub.dev) | API key |
@@ -28,6 +29,7 @@ Each folder is a self-contained project with its own README (install, run, verif
 ## Verification checklist
 
 - [ ] **javascript** — `npm i && npm run dev` → Identify / Track / Page → events appear
+- [ ] **react** — `npm i && npm run dev` → Identify / Track / Page → events appear
 - [ ] **nodejs** — `npm i && npm start` → script flushes → events appear
 - [ ] **react-native / flutter / ios / android** — set API key → Identify / Track / Screen on simulator or emulator
 - [ ] Push / location — physical device + your own Firebase/APNs files (never commit secrets)
