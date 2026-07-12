@@ -17,7 +17,6 @@ export function buildZixflowConfig(): ZixflowConfig {
   return {
     apiKey: ZIXFLOW_API_KEY,
     logLevel: ZixflowLogLevel.Debug,
-    inApp: {},
     autoTrackDeviceAttributes: true,
     trackApplicationLifecycleEvents: true,
   };

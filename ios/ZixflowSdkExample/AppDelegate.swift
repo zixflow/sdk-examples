@@ -1,7 +1,6 @@
 import UIKit
 import ZixflowDataPipelines
 import ZixflowMessagingPushAPN
-import ZixflowMessagingInApp
 import ZixflowLocation
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -39,10 +38,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
                     .autoTrackPushEvents(true)
                     .showPushAppInForeground(true)
                     .build()
-            )
-
-            MessagingInApp.initialize(
-                withConfig: MessagingInAppConfigBuilder().build()
             )
         }
 

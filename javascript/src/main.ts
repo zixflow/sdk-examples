@@ -6,7 +6,6 @@ import {
 } from '@zixflow/analytics-browser'
 
 const writeKey = import.meta.env.VITE_ZIXFLOW_WRITE_KEY as string | undefined
-const siteId = import.meta.env.VITE_ZIXFLOW_SITE_ID as string | undefined
 
 const app = document.querySelector<HTMLDivElement>('#app')!
 
@@ -14,7 +13,7 @@ app.innerHTML = `
   <main>
     <header>
       <h1>Zixflow Browser SDK</h1>
-      <p>Feature demo for identify, track, page, screen, group, alias, reset, web push, and inbox.</p>
+      <p>Feature demo for identify, track, page, screen, group, alias, reset, and web push.</p>
     </header>
 
     <div class="status" id="status">Initializing…</div>
@@ -52,14 +51,6 @@ app.innerHTML = `
     </section>
 
     <section class="panel">
-      <h2>In-app inbox</h2>
-      <div class="grid">
-        <button data-action="inbox">Refresh inbox</button>
-      </div>
-      <p class="hint">Set <code>VITE_ZIXFLOW_SITE_ID</code> to enable the in-app plugin.</p>
-    </section>
-
-    <section class="panel">
       <h2>Log</h2>
       <div id="log"></div>
     </section>
@@ -92,18 +83,6 @@ if (!writeKey || writeKey === 'YOUR_WRITE_KEY') {
         window.location.href = url
       },
     },
-  }
-
-  if (siteId && siteId !== 'YOUR_SITE_ID') {
-    initOptions.integrations = {
-      'Zixflow In-App Plugin': {
-        siteId,
-        events: (event: { type: string; detail?: unknown }) => {
-          log(`In-app event: ${event.type}`)
-          console.log('In-app detail', event.detail)
-        },
-      },
-    }
   }
 
   void (async () => {
@@ -194,20 +173,6 @@ if (!writeKey || writeKey === 'YOUR_WRITE_KEY') {
             await unsubscribeFromPush(analytics)
             log('unsubscribeFromPush ok')
             break
-          case 'inbox': {
-            const inbox = analytics.inbox?.()
-            if (!inbox) {
-              log('inbox() unavailable — set VITE_ZIXFLOW_SITE_ID')
-              break
-            }
-            const total = await inbox.total()
-            const unopened = await inbox.totalUnopened()
-            const messages = await inbox.messages()
-            log(
-              `inbox total=${total} unopened=${unopened} messages=${messages.length}`
-            )
-            break
-          }
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)

@@ -30,7 +30,7 @@ Each folder is a self-contained project with its own README (install, run, verif
 - [ ] **javascript** — `npm i && npm run dev` → Identify / Track / Page → events appear
 - [ ] **nodejs** — `npm i && npm start` → script flushes → events appear
 - [ ] **react-native / flutter / ios / android** — set API key → Identify / Track / Screen on simulator or emulator
-- [ ] Push / in-app / location — physical device + your own Firebase/APNs files (never commit secrets)
+- [ ] Push / location — physical device + your own Firebase/APNs files (never commit secrets)
 
 ## Credentials (public-repo safe)
 
@@ -43,7 +43,7 @@ Do **not** commit real write keys, API keys, `google-services.json`, `GoogleServ
 
 ## What each demo covers
 
-Demos mirror the published docs for that SDK (core identify/track/page|screen, plus group/alias/reset/flush where documented, and optional push, in-app, and location modules).
+Demos mirror the published docs for that SDK (core identify/track/page|screen, plus group/alias/reset/flush where documented, and optional push and location modules).
 
 ## License
 

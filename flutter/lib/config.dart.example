@@ -7,9 +7,6 @@ class AppConfig {
   /// Zixflow API key from Settings → Developers → API Keys.
   static const String zixflowApiKey = 'YOUR_API_KEY';
 
-  /// Enable the in-app messaging module (`InAppConfig` in `ZixflowConfig`).
-  static const bool enableInApp = true;
-
   /// Enable location tracking (`LocationConfig` in `ZixflowConfig`).
   /// Requires platform setup — see README.
   static const bool enableLocation = true;

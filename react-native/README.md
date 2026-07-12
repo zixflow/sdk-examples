@@ -1,15 +1,15 @@
 # Zixflow React Native SDK Example
 
-Feature demo for [`zixflow-reactnative`](https://www.npmjs.com/package/zixflow-reactnative) covering core analytics, in-app messaging, and push token APIs.
+Feature demo for [`zixflow-reactnative`](https://www.npmjs.com/package/zixflow-reactnative) covering core analytics and push token APIs.
 
-Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/react-native/quick-start) · [Core Features](https://docs.zixflow.com/documentation/sdk/react-native/core-features) · [Installation](https://docs.zixflow.com/documentation/sdk/react-native/installation) · [Push](https://docs.zixflow.com/documentation/sdk/react-native/push-notifications) · [In-App](https://docs.zixflow.com/documentation/sdk/react-native/in-app-messaging) · [Location](https://docs.zixflow.com/documentation/sdk/react-native/location-tracking)
+Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/react-native/quick-start) · [Core Features](https://docs.zixflow.com/documentation/sdk/react-native/core-features) · [Installation](https://docs.zixflow.com/documentation/sdk/react-native/installation) · [Push](https://docs.zixflow.com/documentation/sdk/react-native/push-notifications) · [Location](https://docs.zixflow.com/documentation/sdk/react-native/location-tracking)
 
 ## What this folder contains
 
 | Path | Purpose |
 |------|---------|
 | `App.tsx` | Demo UI and all `Zixflow.*` calls |
-| `src/config.ts` | API key and `ZixflowConfig` (`inApp: {}` enabled) |
+| `src/config.ts` | API key and `ZixflowConfig` |
 | `native-snippets/` | Critical Android/iOS integration snippets |
 | `package.json` | Depends on `zixflow-reactnative@^1.1.3` |
 
@@ -86,20 +86,16 @@ npm run android  # emulator or device
 | Register device token | `Zixflow.registerDeviceToken(token)` |
 | Delete device token | `Zixflow.deleteDeviceToken()` |
 
-In-app events are logged automatically via `Zixflow.inAppMessaging.registerEventsListener` in `App.tsx`.
-
 ## Verify
 
 1. Set your API key in `src/config.ts`.
 2. Run the app on a simulator or emulator.
 3. Tap **Identify**, then **Track** and **Screen**.
 4. Confirm events for `user-123` / `user@example.com` in the Zixflow dashboard.
-5. For in-app: identify a user, create a campaign in the dashboard, and relaunch the app.
-6. For push: complete native setup, use a **physical device**, call **Identify**, then request permission and register the device token.
+5. For push: complete native setup, use a **physical device**, call **Identify**, then request permission and register the device token.
 
-## Push, in-app, and location
+## Push and location
 
-- **In-app** — Enabled with `inApp: {}` in `src/config.ts`. No extra UI code required for standard messages.
 - **Push** — Requires platform setup (APNs or FCM), dashboard credentials, and `identify()` before targeted sends. See `native-snippets/`.
 - **Location** — Optional native module; enable Podfile subspec (iOS) and `zixflow_location_enabled=true` (Android). Your app must request OS location permission.
 
@@ -116,4 +112,3 @@ Parent [`.gitignore`](../.gitignore) already excludes these patterns.
 - **SDK not initialized** — Check `ZIXFLOW_API_KEY` in `src/config.ts`.
 - **iOS build fails** — Open `ios/*.xcworkspace` in Xcode; run `pod install` after Podfile changes.
 - **Push token empty** — Complete native push setup; simulators cannot receive APNs.
-- **In-app not showing** — Identify first; confirm campaign targeting and `inApp: {}` in config.

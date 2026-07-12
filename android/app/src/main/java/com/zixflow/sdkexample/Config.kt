@@ -7,6 +7,6 @@ package com.zixflow.sdkexample
 object Config {
     const val apiKey: String = "YOUR_API_KEY"
 
-    /** When true, registers FCM push, in-app, and location modules at init. */
+    /** When true, registers FCM push and location modules at init. */
     const val enableOptionalModules: Boolean = true
 }

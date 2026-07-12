@@ -64,7 +64,7 @@ The home screen lists buttons that call:
 | Register Device Token (demo) | `Zixflow.instance.registerDeviceToken()` with a placeholder token |
 | Delete Device Token | `Zixflow.instance.deleteDeviceToken()` |
 
-SDK initialization (in `lib/main.dart`) enables optional **in-app** (`InAppConfig`) and **location** (`LocationConfig`) modules. Push/Firebase setup is commented with instructions.
+SDK initialization (in `lib/main.dart`) enables optional **location** (`LocationConfig`). Push/Firebase setup is commented with instructions.
 
 ## Verify
 
@@ -118,10 +118,6 @@ Example placeholder (replace with your Firebase Android app config):
 9. Configure iOS: Push Notifications capability, `ZixflowAppDelegateWrapper` in `AppDelegate.swift` — see [Push Notifications](https://docs.zixflow.com/documentation/sdk/flutter/push-notifications).
 
 Test push on a **physical device** after `identify()` and registering a real FCM token.
-
-## Optional: In-app messaging
-
-Enabled by default via `InAppConfig()` in `ZixflowConfig`. Identify a user, create a campaign in the dashboard, and messages render automatically. See [In-App Messaging](https://docs.zixflow.com/documentation/sdk/flutter/in-app-messaging).
 
 ## Optional: Location tracking
 

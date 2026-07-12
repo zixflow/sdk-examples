@@ -1,6 +1,6 @@
 # Zixflow iOS SDK Example
 
-SwiftUI feature demo for `ZixflowDataPipelines` with optional push (APNs), in-app, and location pods.
+SwiftUI feature demo for `ZixflowDataPipelines` with optional push (APNs) and location pods.
 
 Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/ios/quick-start) · [Core Features](https://docs.zixflow.com/documentation/sdk/ios/core-features) · [Installation](https://docs.zixflow.com/documentation/sdk/ios/installation)
 
@@ -21,7 +21,7 @@ If Xcode asks about signing, select your team under Signing & Capabilities.
 
 ### Optional modules
 
-The `Podfile` includes push APN, in-app, and location pods. `AppDelegate` initializes them when `Config.enableOptionalModules` is `true`.
+The `Podfile` includes push APN and location pods. `AppDelegate` initializes them when `Config.enableOptionalModules` is `true`.
 
 For real push:
 - Enable Push Notifications + Background Modes capabilities

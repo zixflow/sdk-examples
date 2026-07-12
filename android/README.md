@@ -1,6 +1,6 @@
 # Zixflow Android SDK Example
 
-Kotlin feature demo for `com.zixflow.com.android:datapipelines` plus optional FCM push, in-app, and location modules.
+Kotlin feature demo for `com.zixflow.com.android:datapipelines` plus optional FCM push and location modules.
 
 Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/android/quick-start) · [Core Features](https://docs.zixflow.com/documentation/sdk/android/core-features) · [Installation](https://docs.zixflow.com/documentation/sdk/android/installation)
 
@@ -32,7 +32,7 @@ Then uncomment the Google Services plugin lines in `build.gradle.kts` files (see
 | Device token | `registerDeviceToken` / `deleteDeviceToken` / `registeredDeviceToken` |
 | Logout | `clearIdentify()` |
 
-Init enables `ModuleMessagingPushFCM`, `ModuleMessagingInApp`, and `ModuleLocation` when `Config.enableOptionalModules` is true (default).
+Init enables `ModuleMessagingPushFCM` and `ModuleLocation` when `Config.enableOptionalModules` is true (default).
 
 ## Verify
 

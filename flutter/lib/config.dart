@@ -10,8 +10,6 @@ class AppConfig {
     defaultValue: zixflowApiKeyDefault,
   );
 
-  static const bool enableInApp = true;
-
   static const bool enableLocation = true;
 
   static const String demoDeviceToken = 'demo-fcm-device-token';

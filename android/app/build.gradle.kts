@@ -40,7 +40,6 @@ android {
 dependencies {
     implementation("com.zixflow.com.android:datapipelines:1.1.3")
     implementation("com.zixflow.com.android:messaging-push-fcm:1.1.3")
-    implementation("com.zixflow.com.android:messaging-in-app:1.1.3")
     implementation("com.zixflow.com.android:location:1.1.3")
 
     implementation("androidx.appcompat:appcompat:1.7.0")

@@ -7,7 +7,6 @@ import {
   View,
 } from 'react-native';
 import {
-  InAppMessageEventType,
   Zixflow,
   ZixflowPushPermissionStatus,
 } from 'zixflow-reactnative';
@@ -46,40 +45,13 @@ export default function App() {
       try {
         await Zixflow.initialize(config);
         setInitialized(true);
-        appendLog('Zixflow SDK initialized (inApp enabled)');
+        appendLog('Zixflow SDK initialized');
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error);
         appendLog(`Initialize failed: ${message}`);
       }
     })();
-
-    const subscription = Zixflow.inAppMessaging.registerEventsListener(
-      (event) => {
-        switch (event.eventType) {
-          case InAppMessageEventType.messageShown:
-            appendLog(`In-app shown: ${event.messageId ?? 'unknown'}`);
-            break;
-          case InAppMessageEventType.messageDismissed:
-            appendLog(`In-app dismissed: ${event.messageId ?? 'unknown'}`);
-            break;
-          case InAppMessageEventType.messageActionTaken:
-            appendLog(
-              `In-app action: ${event.actionName ?? ''} → ${event.actionValue ?? ''}`,
-            );
-            break;
-          case InAppMessageEventType.errorWithMessage:
-            appendLog(`In-app error: ${event.messageId ?? 'unknown'}`);
-            break;
-          default:
-            appendLog('In-app event received');
-        }
-      },
-    );
-
-    return () => {
-      subscription.remove();
-    };
   }, [appendLog]);
 
   const run = useCallback(
@@ -203,7 +175,7 @@ export default function App() {
       <Text style={styles.title}>Zixflow React Native SDK</Text>
       <Text style={styles.subtitle}>
         Feature demo for identify, track, screen, profile/device attributes,
-        in-app messaging, and push token APIs.
+        and push token APIs.
       </Text>
 
       <View style={styles.statusBox}>
@@ -268,11 +240,7 @@ export default function App() {
         />
       </Section>
 
-      <Section title="In-app & location notes">
-        <Text style={styles.hint}>
-          In-app messaging is enabled via inApp: {'{}'} in config. Identify a
-          user, then launch a campaign in the Zixflow dashboard.
-        </Text>
+      <Section title="Location notes">
         <Text style={styles.hint}>
           Location tracking is optional: add the location Podfile subspec (iOS)
           and zixflow_location_enabled=true (Android). Request OS permission in

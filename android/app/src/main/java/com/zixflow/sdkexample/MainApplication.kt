@@ -2,8 +2,6 @@ package com.zixflow.sdkexample
 
 import android.app.Application
 import com.zixflow.location.ModuleLocation
-import com.zixflow.messaginginapp.MessagingInAppModuleConfig
-import com.zixflow.messaginginapp.ModuleMessagingInApp
 import com.zixflow.messagingpush.ModuleMessagingPushFCM
 import com.zixflow.sdk.Zixflow
 import com.zixflow.sdk.ZixflowConfigBuilder
@@ -25,11 +23,6 @@ class MainApplication : Application() {
         if (Config.enableOptionalModules) {
             builder
                 .addZixflowModule(ModuleMessagingPushFCM())
-                .addZixflowModule(
-                    ModuleMessagingInApp(
-                        config = MessagingInAppModuleConfig.Builder().build()
-                    )
-                )
                 .addZixflowModule(ModuleLocation())
         }
 
