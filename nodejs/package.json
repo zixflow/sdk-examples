@@ -1,0 +1,17 @@
+{
+  "name": "zixflow-nodejs-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Zixflow Node.js SDK feature demo",
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "start:example-env": "node --env-file=.env.example src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@zixflow/analytics-node": "^1.1.5"
+  }
+}

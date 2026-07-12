@@ -1,0 +1,114 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		189B3919216049F3A62884B1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 075C432F862B403BAE2B9AAA /* AppDelegate.swift */; };
+		4536F6450A2346D3BA36E567 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6157A3AA446D46DEBE376BF9 /* Config.swift */; };
+		BE14C9771FF14B178B322081 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EACA5AFFDDE4D3682C6531B /* ContentView.swift */; };
+		23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */; };
+		81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZixflowSdkExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		075C432F862B403BAE2B9AAA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		6157A3AA446D46DEBE376BF9 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		2EACA5AFFDDE4D3682C6531B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZixflowSdkExampleApp.swift; sourceTree = "<group>"; };
+		56BBA84DD69D4719B358BCC7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */ = {isa = PBXGroup; children = (075C432F862B403BAE2B9AAA /* AppDelegate.swift */, 6157A3AA446D46DEBE376BF9 /* Config.swift */, 2EACA5AFFDDE4D3682C6531B /* ContentView.swift */, C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */, 56BBA84DD69D4719B358BCC7 /* Info.plist */,); path = ZixflowSdkExample; sourceTree = "<group>"; };
+		672F14B884E94EE4801E9E76 /* Products */ = {isa = PBXGroup; children = (81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */,); name = Products; sourceTree = "<group>"; };
+		C4643D7FA6D14630BFA3DC63 = {isa = PBXGroup; children = (F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */, 672F14B884E94EE4801E9E76 /* Products */,); sourceTree = "<group>"; };
+		7FA2D1382C2C4023992D8869 /* ZixflowSdkExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 157CBBBCC4B145D59CC14EBF /* Build configuration list for PBXNativeTarget "ZixflowSdkExample" */;
+			buildPhases = (
+				E6B161A269E94542BC43864B /* Sources */,
+				48C3318A682940A9A0225B7A /* Frameworks */,
+				F960C88F30DB40A8A830222B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ZixflowSdkExample;
+			productName = ZixflowSdkExample;
+			productReference = 81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E46B21C59C574CEF90B2B4D6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+			};
+			buildConfigurationList = F0B0D6F062E2467A8F84F9E0 /* Build configuration list for PBXProject "ZixflowSdkExample" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C4643D7FA6D14630BFA3DC63;
+			productRefGroup = 672F14B884E94EE4801E9E76 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7FA2D1382C2C4023992D8869 /* ZixflowSdkExample */,
+			);
+		};
+		E6B161A269E94542BC43864B /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (189B3919216049F3A62884B1 /* AppDelegate.swift in Sources */, 4536F6450A2346D3BA36E567 /* Config.swift in Sources */, BE14C9771FF14B178B322081 /* ContentView.swift in Sources */, 23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */,); runOnlyForDeploymentPostprocessing = 0; };
+		48C3318A682940A9A0225B7A /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		F960C88F30DB40A8A830222B /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		DA8188D06633483481C911EE /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			}; name = Debug; };
+		260EA9A6334C488883F2449A /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				SWIFT_COMPILATION_MODE = wholemodule;
+			}; name = Release; };
+		14C812B62651410381DF77E9 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZixflowSdkExample/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zixflow.sdkexample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			}; name = Debug; };
+		E395FB02C650463ABE9A6046 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZixflowSdkExample/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zixflow.sdkexample;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			}; name = Release; };
+		F0B0D6F062E2467A8F84F9E0 /* Build configuration list for PBXProject "ZixflowSdkExample" */ = {isa = XCConfigurationList; buildConfigurations = (DA8188D06633483481C911EE /* Debug */, 260EA9A6334C488883F2449A /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		157CBBBCC4B145D59CC14EBF /* Build configuration list for PBXNativeTarget "ZixflowSdkExample" */ = {isa = XCConfigurationList; buildConfigurations = (14C812B62651410381DF77E9 /* Debug */, E395FB02C650463ABE9A6046 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+	};
+	rootObject = E46B21C59C574CEF90B2B4D6 /* Project object */;
+}

@@ -1,0 +1,20 @@
+/// Copy this file to `config.dart` and set your API key, or pass it at runtime:
+///
+/// ```bash
+/// flutter run --dart-define=ZIXFLOW_API_KEY=your_api_key
+/// ```
+class AppConfig {
+  /// Zixflow API key from Settings → Developers → API Keys.
+  static const String zixflowApiKey = 'YOUR_API_KEY';
+
+  /// Enable the in-app messaging module (`InAppConfig` in `ZixflowConfig`).
+  static const bool enableInApp = true;
+
+  /// Enable location tracking (`LocationConfig` in `ZixflowConfig`).
+  /// Requires platform setup — see README.
+  static const bool enableLocation = true;
+
+  /// Placeholder token for the Register Device Token demo button.
+  /// Replace with a real FCM token after Firebase setup (see README).
+  static const String demoDeviceToken = 'demo-fcm-device-token';
+}

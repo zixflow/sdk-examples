@@ -1,0 +1,61 @@
+# Secrets & local config
+**/.env
+.env
+.env.local
+*.local
+Local.xcconfig
+**/google-services.json
+**/GoogleService-Info.plist
+**/GoogleService-Info_*.plist
+*.jks
+*.keystore
+*.p12
+*.mobileprovision
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+vendor/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+**/Pods/
+**/DerivedData/
+**/.gradle/
+**/build/
+**/captures/
+**/.cxx/
+local.properties
+
+# Build outputs
+dist/
+build/
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
+.next/
+out/
+coverage/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcuserstate
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+*.iml
+Thumbs.db
+
+# Flutter / RN
+.flutter-plugins
+.flutter-plugins-dependencies
+.metro-health-check*
+*.jsbundle
+ios/Pods/
+android/.gradle/

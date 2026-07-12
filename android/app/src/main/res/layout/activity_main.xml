@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Zixflow Android SDK"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="16dp"
+            android:text="Ready" />
+
+        <Button android:id="@+id/btnIdentify" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Identify" />
+        <Button android:id="@+id/btnTrack" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Track" />
+        <Button android:id="@+id/btnScreen" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Screen" />
+        <Button android:id="@+id/btnProfile" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Set profile attributes" />
+        <Button android:id="@+id/btnDeviceAttrs" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Set device attributes" />
+        <Button android:id="@+id/btnShowToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Show device token" />
+        <Button android:id="@+id/btnRegisterToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Register demo device token" />
+        <Button android:id="@+id/btnDeleteToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Delete device token" />
+        <Button android:id="@+id/btnClear" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Clear identify (logout)" />
+    </LinearLayout>
+</ScrollView>

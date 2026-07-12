@@ -1,0 +1,12 @@
+platform :ios, '13.0'
+use_frameworks!
+
+target 'ZixflowSdkExample' do
+  # Core (required)
+  pod 'ZixflowDataPipelines', '~> 1.1'
+
+  # Optional modules
+  pod 'ZixflowMessagingPushAPN', '~> 1.1'
+  pod 'ZixflowMessagingInApp', '~> 1.1'
+  pod 'ZixflowLocation', '~> 1.1'
+end
