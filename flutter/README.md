@@ -77,7 +77,7 @@ SDK initialization (in `lib/main.dart`) enables optional **location** (`Location
 
 Core analytics works without Firebase. For push:
 
-1. Create a Firebase project and add iOS + Android apps with bundle ID **`com.zixflow.sdkdemo`**.
+1. Create a Firebase project and add iOS + Android apps with bundle ID **`com.zixflow.demo`**.
 2. Download config files from Firebase Console:
    - **`google-services.json`** → `android/app/google-services.json`
    - **`GoogleService-Info.plist`** → `ios/Runner/GoogleService-Info.plist`
@@ -96,7 +96,7 @@ Example placeholder (replace with your Firebase Android app config):
       "client_info": {
         "mobilesdk_app_id": "YOUR_APP_ID",
         "android_client_info": {
-          "package_name": "com.zixflow.sdkdemo"
+          "package_name": "com.zixflow.demo"
         }
       }
     }

@@ -23,7 +23,7 @@ const DEMO_TOKEN_PLACEHOLDER = 'paste-fcm-or-apns-token-here';
 export default function App() {
   const [log, setLog] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
-  const [deviceTokenInput, setDeviceTokenInput] = useState(DEMO_TOKEN_PLACEHOLDER);
+  const [deviceTokenInput, setDeviceTokenInput] = useState('');
 
   const appendLog = useCallback((message: string) => {
     const stamp = new Date().toLocaleTimeString();
@@ -128,6 +128,19 @@ export default function App() {
       await Zixflow.clearIdentify();
     });
 
+  const fetchAndShowRegisteredToken = useCallback(async (): Promise<
+    string | null
+  > => {
+    const token = await Zixflow.pushMessaging.getRegisteredDeviceToken();
+    if (token) {
+      setDeviceTokenInput(token);
+      appendLog(`Registered token: ${truncate(token)}`);
+      return token;
+    }
+    appendLog('No registered token yet');
+    return null;
+  }, [appendLog]);
+
   const handleRequestPushPermission = () =>
     run('showPromptForPushNotifications', async () => {
       const status =
@@ -135,25 +148,46 @@ export default function App() {
           ios: { sound: true, badge: true },
         });
       appendLog(`Push permission: ${permissionLabel(status)}`);
+      if (status === ZixflowPushPermissionStatus.Granted) {
+        // SDK auto-registers FCM/APNs on init; refresh the field for visibility.
+        try {
+          await fetchAndShowRegisteredToken();
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          appendLog(
+            `Token not ready yet (${message}). Tap Identify, wait a moment, then Get registered token.`,
+          );
+        }
+      }
     });
 
   const handleGetRegisteredToken = () =>
     run('getRegisteredDeviceToken', async () => {
-      const token = await Zixflow.pushMessaging.getRegisteredDeviceToken();
-      appendLog(
-        token
-          ? `Registered token: ${truncate(token)}`
-          : 'No registered token yet',
-      );
+      await fetchAndShowRegisteredToken();
     });
 
   const handleRegisterDeviceToken = () =>
     run('registerDeviceToken', async () => {
-      const token = deviceTokenInput.trim();
+      let token = deviceTokenInput.trim();
       if (!token || token === DEMO_TOKEN_PLACEHOLDER) {
-        throw new Error('Enter a device token in the field below');
+        try {
+          token =
+            (await Zixflow.pushMessaging.getRegisteredDeviceToken()) ?? '';
+        } catch {
+          token = '';
+        }
+        if (token) {
+          setDeviceTokenInput(token);
+        }
+      }
+      if (!token || token === DEMO_TOKEN_PLACEHOLDER) {
+        throw new Error(
+          'No token available. Request permission first (and ensure google-services.json is installed), or paste a token.',
+        );
       }
       await Zixflow.registerDeviceToken(token);
+      appendLog(`Registered token with SDK: ${truncate(token)}`);
     });
 
   const handleDeleteDeviceToken = () =>
@@ -206,9 +240,11 @@ export default function App() {
 
       <Section title="Push (native setup required)">
         <Text style={styles.hint}>
-          Complete iOS/Android push setup (see README and native-snippets/).
-          Call identify before expecting targeted pushes. Use a physical device
-          for end-to-end delivery tests.
+          Recommended order: 1) Identify 2) Request push permission 3) Get
+          registered token. With Android `google-services.json` (client config)
+          installed, the SDK auto-fetches FCM on init — you usually only need
+          Identify + permission. Use Register only to re-send or paste a custom
+          token. See README and native-snippets/.
         </Text>
         <View style={styles.grid}>
           <ActionButton
@@ -229,7 +265,9 @@ export default function App() {
             secondary
           />
         </View>
-        <Text style={styles.fieldLabel}>Manual token (FCM/APNs)</Text>
+        <Text style={styles.fieldLabel}>
+          Device token (auto-filled after Get / permission, or paste)
+        </Text>
         <TextInput
           style={styles.input}
           value={deviceTokenInput}
@@ -237,6 +275,7 @@ export default function App() {
           autoCapitalize="none"
           autoCorrect={false}
           multiline
+          placeholder={DEMO_TOKEN_PLACEHOLDER}
         />
       </Section>
 

@@ -1,4 +1,4 @@
-package com.zixflowrndemo
+package com.zixflow.demo
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

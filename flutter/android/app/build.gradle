@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace 'com.zixflow.sdkdemo'
+    namespace 'com.zixflow.demo'
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zixflow.sdkdemo"
+        applicationId "com.zixflow.demo"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode 1

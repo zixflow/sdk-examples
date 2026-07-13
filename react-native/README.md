@@ -52,7 +52,7 @@ Ensure `app.json` name matches the native app name:
 { "name": "ZixflowRNDemo", "displayName": "Zixflow RN Demo" }
 ```
 
-Update `android/app/src/main/java/.../MainActivity.kt` `getMainComponentName()` to return `"ZixflowRNDemo"` if the CLI used a different package path.
+Update `android/app/src/main/java/com/zixflow/demo/MainActivity.kt` `getMainComponentName()` to return `"ZixflowRNDemo"` if the CLI used a different package path.
 
 ## 3. Install dependencies
 
@@ -62,6 +62,29 @@ cd ios && bundle exec pod install && cd ..
 ```
 
 Apply push/location native setup from [`native-snippets/README.md`](./native-snippets/README.md) before testing push on device.
+
+### Android FCM (required for push on Android)
+
+1. In [Firebase Console](https://console.firebase.google.com/) → **Project settings** → **Your apps**, add an Android app with package name `com.zixflow.demo` (must match `applicationId` in `android/app/build.gradle`).
+2. Download the **client** config file named **`google-services.json`** (plural) and place it at:
+
+   ```text
+   android/app/google-services.json
+   ```
+
+   See [`android/app/google-services.json.example`](./android/app/google-services.json.example) for the expected shape (copy/rename after downloading the real file from Firebase).
+
+3. Rebuild the app (`npm run android`). The Google Services Gradle plugin is already wired and applies automatically when this file exists.
+
+> **Wrong file:** A Firebase **service account** JSON (`type: "service_account"`, includes a `private_key`) is **not** `google-services.json`. Use that only in the Zixflow dashboard / backend for sending pushes — never in the Android app. The client file has `project_info` and a `client` array with your package name.
+
+Also configure FCM credentials in the Zixflow dashboard (**Settings → Developers / Push**).
+
+**Push verify (after rebuild):**
+
+1. Logcat should **not** show `Default FirebaseApp is not initialized`.
+2. In the app: **Identify** → **Request push permission** → **Get registered token** (field should auto-fill; token should be non-empty).
+3. Confirm the device/push token on the user profile in the Zixflow dashboard.
 
 ## 4. Run
 
@@ -92,7 +115,7 @@ npm run android  # emulator or device
 2. Run the app on a simulator or emulator.
 3. Tap **Identify**, then **Track** and **Screen**.
 4. Confirm events for `user-123` / `user@example.com` in the Zixflow dashboard.
-5. For push: complete native setup, use a **physical device**, call **Identify**, then request permission and register the device token.
+5. For push: install `android/app/google-services.json`, rebuild, use a **physical device** when possible, then **Identify** → **Request push permission** → **Get registered token**.
 
 ## Push and location
 
@@ -102,13 +125,16 @@ npm run android  # emulator or device
 ## Secrets (do not commit)
 
 - Real API keys in `src/config.ts`
-- `google-services.json`, `GoogleService-Info.plist`
+- `android/app/google-services.json` (and misnamed `google-service.json`)
+- Firebase service-account / `*firebase-adminsdk*.json` files
+- `GoogleService-Info.plist`
 - Keystores, provisioning profiles, `.env` with real values
 
-Parent [`.gitignore`](../.gitignore) already excludes these patterns.
+[`.gitignore`](./.gitignore) and parent [`../.gitignore`](../.gitignore) exclude these patterns.
 
 ## Troubleshooting
 
 - **SDK not initialized** — Check `ZIXFLOW_API_KEY` in `src/config.ts`.
 - **iOS build fails** — Open `ios/*.xcworkspace` in Xcode; run `pod install` after Podfile changes.
-- **Push token empty** — Complete native push setup; simulators cannot receive APNs.
+- **`Default FirebaseApp is not initialized`** — Add the Firebase **client** `android/app/google-services.json` (not a service-account JSON), then rebuild. Confirm the Google Services plugin applied (file must be named exactly `google-services.json`).
+- **Push token empty / `device_token_not_found`** — Confirm `google-services.json` is present, rebuild, grant notification permission, tap **Identify**, wait a few seconds, then **Get registered token**.

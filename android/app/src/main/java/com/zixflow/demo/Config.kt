@@ -1,4 +1,4 @@
-package com.zixflow.sdkexample
+package com.zixflow.demo
 
 /**
  * Replace YOUR_API_KEY with a key from Zixflow → Settings → Developers → API Keys.

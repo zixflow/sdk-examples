@@ -1,4 +1,4 @@
-package com.zixflow.sdkexample
+package com.zixflow.demo
 
 import android.app.Application
 import com.zixflow.location.ModuleLocation

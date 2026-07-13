@@ -1,4 +1,4 @@
-package com.zixflow.sdkexample
+package com.zixflow.demo
 
 import android.os.Bundle
 import android.widget.Button

@@ -18,7 +18,7 @@ class NotificationService: UNNotificationServiceExtension {
         MessagingPushFCM.initializeForExtension(
             withConfig: MessagingPushConfigBuilder(cdpApiKey: Env.cdpApiKey)
                 .logLevel(.debug)
-                .appGroupId("group.com.zixflow.sdkdemo")
+                .appGroupId("group.com.zixflow.demo")
                 .build()
         )
         

@@ -1,4 +1,4 @@
-package com.zixflow.sdkdemo
+package com.zixflow.demo
 
 import io.flutter.embedding.android.FlutterActivity
 

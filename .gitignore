@@ -5,8 +5,11 @@
 *.local
 Local.xcconfig
 **/google-services.json
+**/google-service.json
 **/GoogleService-Info.plist
 **/GoogleService-Info_*.plist
+**/*firebase-adminsdk*.json
+**/firebase-service-account.json
 *.jks
 *.keystore
 *.p12

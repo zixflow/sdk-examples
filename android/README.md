@@ -8,7 +8,7 @@ Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/android/quick-sta
 
 1. Open this folder in Android Studio (Giraffe+ / AGP 8+).
 2. Copy `local.properties.example` → `local.properties` and set `sdk.dir` (Android Studio usually creates this).
-3. Set your API key in `app/src/main/java/com/zixflow/sdkexample/Config.kt` (replace `YOUR_API_KEY`).
+3. Set your API key in `app/src/main/java/com/zixflow/demo/Config.kt` (replace `YOUR_API_KEY`).
 4. Sync Gradle and run on an emulator or device (API 21+).
 
 ### Optional: push / Firebase

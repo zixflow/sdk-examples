@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.zixflow.sdkexample"
+    namespace = "com.zixflow.demo"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.zixflow.sdkexample"
+        applicationId = "com.zixflow.demo"
         minSdk = 21
         targetSdk = 35
         versionCode = 1

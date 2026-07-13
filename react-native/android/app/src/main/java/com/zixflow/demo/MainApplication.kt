@@ -1,4 +1,4 @@
-package com.zixflowrndemo
+package com.zixflow.demo
 
 import android.app.Application
 import com.facebook.react.PackageList

@@ -43,6 +43,9 @@ apply plugin: "com.google.gms.google-services"
 
 Place your `google-services.json` in `android/app/` (never commit real files).
 
+> Download the **Android client** config from Firebase Console (has `project_info` + `client`). Do **not** put a Firebase **service account** JSON (`type: "service_account"` / `private_key`) in the app — that belongs in the Zixflow dashboard for sending pushes only.
+> Filename must be exactly `google-services.json` (plural).
+
 ### `android/gradle.properties` (location module)
 
 ```properties

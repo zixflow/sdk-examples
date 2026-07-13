@@ -1,0 +1,23 @@
+# Local secrets — never commit
+.env
+.env.local
+src/config.local.ts
+
+# Firebase / Google (Android + iOS) — keep *.example templates tracked
+android/app/google-services.json
+android/app/google-service.json
+!android/app/google-services.json.example
+ios/**/GoogleService-Info.plist
+ios/**/GoogleService-Info_*.plist
+*firebase-adminsdk*.json
+firebase-service-account.json
+
+# Native build / IDE
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+ios/Pods/
+ios/build/
+*.xcuserstate
+.DS_Store

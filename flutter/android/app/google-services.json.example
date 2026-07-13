@@ -10,7 +10,7 @@
         "client_info": {
           "mobilesdk_app_id": "1:YOUR_PROJECT_NUMBER:android:YOUR_APP_HASH",
           "android_client_info": {
-            "package_name": "com.zixflow.sdkdemo"
+            "package_name": "com.zixflow.demo"
           }
         },
         "oauth_client": [],
