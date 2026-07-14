@@ -103,6 +103,15 @@
             plan: 'premium',
             created_at: new Date().toISOString(),
           })
+          if (
+            'serviceWorker' in navigator &&
+            navigator.serviceWorker.controller
+          ) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'SET_USER_ID',
+              userId: 'user@example.com',
+            })
+          }
           log('identify sent')
           break
         case 'track':

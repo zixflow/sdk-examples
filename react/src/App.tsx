@@ -1,7 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnalyticsBrowser, type Analytics } from '@zixflow/analytics-browser'
+import {
+  AnalyticsBrowser,
+  subscribeToPush,
+  unsubscribeFromPush,
+  type Analytics,
+} from '@zixflow/analytics-browser'
 
 const writeKey = import.meta.env.VITE_ZIXFLOW_WRITE_KEY
+
+function postUserIdToServiceWorker(userId: string) {
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SET_USER_ID',
+      userId,
+    })
+  }
+}
 
 export default function App() {
   const [status, setStatus] = useState('Initializing…')
@@ -32,16 +46,27 @@ export default function App() {
 
     void (async () => {
       try {
-        // Initialize with your write key
-        const [analytics] = await AnalyticsBrowser.load({
-          writeKey,
-        })
+        const [analytics] = await AnalyticsBrowser.load(
+          { writeKey },
+          {
+            webPush: {
+              enabled: true,
+              swUrl: '/sw.js',
+              autoSubscribe: false,
+              onNotificationClick: (url, action, data) => {
+                log(`Notification click: ${url} action=${action}`)
+                console.log('Notification data', data)
+                if (url) window.location.href = url
+              },
+            },
+          }
+        )
 
         if (cancelled) return
 
         analyticsRef.current = analytics
-        setStatus(`Loaded · write key …${writeKey.slice(-6)}`)
-        log('SDK loaded')
+        setStatus(`Loaded · write key …${writeKey.slice(-6)} · webPush`)
+        log('SDK loaded with webPush (swUrl=/sw.js, autoSubscribe=false)')
         setReady(true)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
@@ -63,12 +88,12 @@ export default function App() {
       return
     }
     try {
-      // Identify a user
       await analytics.identify('user@example.com', {
         first_name: 'John',
         last_name: 'Doe',
         email: 'user@example.com',
       })
+      postUserIdToServiceWorker('user@example.com')
       log('identify sent')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -84,7 +109,6 @@ export default function App() {
       return
     }
     try {
-      // Track an event
       await analytics.track('button_clicked', {
         button_name: 'signup',
         page: 'homepage',
@@ -104,7 +128,6 @@ export default function App() {
       return
     }
     try {
-      // Track a page view
       await analytics.page('Home', {
         title: 'Homepage',
         url: window.location.href,
@@ -117,11 +140,45 @@ export default function App() {
     }
   }, [log])
 
+  const pushSubscribe = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await subscribeToPush(analytics)
+      log('subscribeToPush ok')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
+  const pushUnsubscribe = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await unsubscribeFromPush(analytics)
+      log('unsubscribeFromPush ok')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
   return (
     <main>
       <header>
         <h1>Zixflow React SDK</h1>
-        <p>Simple CDP demo: load, identify, track, and page.</p>
+        <p>
+          Vite demo: identify, track, page, and web push with action buttons.
+        </p>
       </header>
 
       <div className="status">{status}</div>
@@ -139,6 +196,27 @@ export default function App() {
             Page
           </button>
         </div>
+      </section>
+
+      <section className="panel">
+        <h2>Web push</h2>
+        <div className="grid">
+          <button disabled={!ready} onClick={() => void pushSubscribe()}>
+            Subscribe to push
+          </button>
+          <button
+            className="secondary"
+            disabled={!ready}
+            onClick={() => void pushUnsubscribe()}
+          >
+            Unsubscribe
+          </button>
+        </div>
+        <p className="hint">
+          Uses <code>public/sw.js</code> (<code>swUrl: /sw.js</code>,{' '}
+          <code>autoSubscribe: false</code>). Grant notification permission from
+          Subscribe, then send a push with <code>action_buttons</code>.
+        </p>
       </section>
 
       <section className="panel">

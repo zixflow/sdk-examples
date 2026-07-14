@@ -89,6 +89,25 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button.secondary {
+  background: #374151;
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.hint {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.hint code {
+  font-size: 0.8em;
+}
+
 .log {
   margin-top: 0.75rem;
   background: var(--log-bg);

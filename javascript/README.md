@@ -36,10 +36,19 @@ Then open [http://localhost:8080](http://localhost:8080). Optional: `PORT=3000 .
 1. Click **Identify**, then **Track** / **Page**.
 2. Confirm events in the Zixflow dashboard.
 3. For web push: use `./serve.sh`, grant notification permission, then Subscribe.
+4. Send a push with `action_buttons` (JSON string, max 2). Click the body and each button; confirm **Opened** / **Action Clicked** in campaign metrics.
+
+Example `action_buttons` payload value:
+
+```json
+"[{\"name\":\"Shop Now\",\"deeplink\":\"https://example.com/sale\"},{\"name\":\"Remind Me\",\"deeplink\":\"\"}]"
+```
+
+`sw.js` maps these to Web Notification actions `ACTION_0` / `ACTION_1`, keeps the full payload in `notification.data`, and tracks via CDP when the WebPush plugin posts `SDK_CONFIG` (write key). After **Identify**, the page also posts `SET_USER_ID` to the worker.
 
 ## Notes
 
 - Loads `https://cdn.jsdelivr.net/npm/@zixflow/analytics-browser@1.1.5/dist/umd/index.js`, then calls `AnalyticsBrowser.load` and `analytics.page()` on load.
 - `cdn-path-fix.js` rewrites UMD lazy-chunk URLs from the broken `cdp.zixflow.com/analytics-next/bundles/` path to the jsDelivr UMD folder.
-- Web push uses `sw.js` in this folder (minimal starter from the docs).
+- Web push uses `sw.js` in this folder (action buttons + delivery/open/action tracking).
 - For a React + npm demo, see [`../react`](../react).
