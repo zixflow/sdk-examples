@@ -37,6 +37,15 @@ android {
     }
 }
 
+configurations.configureEach {
+    resolutionStrategy {
+        // Keep androidx.core on 1.15.x so AGP 8.7 / compileSdk 35 stay compatible
+        // (transitive deps may otherwise pull 1.17+, which needs compileSdk 36 + AGP 8.9+)
+        force("androidx.core:core:1.15.0")
+        force("androidx.core:core-ktx:1.15.0")
+    }
+}
+
 dependencies {
     implementation("com.zixflow.com.android:datapipelines:1.1.3")
     implementation("com.zixflow.com.android:messaging-push-fcm:1.1.3")
