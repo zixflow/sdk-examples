@@ -33,6 +33,7 @@ Each folder is a self-contained project with its own README (install, run, verif
 - [ ] **nodejs** — `npm i && npm start` → script flushes → events appear
 - [ ] **react-native / flutter / ios / android** — set API key → Identify / Track / Screen on simulator or emulator
 - [ ] Push / location — physical device + your own Firebase/APNs files (never commit secrets)
+- [ ] **Push action buttons** — send a campaign with two buttons on **react-native**, **flutter**, **android**, **ios**, **javascript**, and **react**; tap each button and confirm Opened + Action Clicked (and deeplink when set)
 
 ## Credentials (public-repo safe)
 
