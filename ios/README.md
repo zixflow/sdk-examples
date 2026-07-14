@@ -28,6 +28,16 @@ For real push:
 - Use a physical device
 - Do not commit provisioning profiles or APNs keys
 
+### Push action buttons
+
+When optional modules are enabled, `AppDelegate` registers the `ZX_2BTN` notification category (`ACTION_0` / `ACTION_1`) and handles action taps:
+
+1. Tracks **Opened** via `MessagingPush.shared.trackMetric` (action taps are not auto-tracked as opens)
+2. Tracks **Push Notification Action Clicked** with delivery ID/token, `action_index`, `action_name`, `action_deeplink`
+3. Opens the button deeplink with `UIApplication.shared.open` when non-empty
+
+Send a test push with `aps.category` = `ZX_2BTN` and an `action_buttons` JSON array (max 2 buttons). Tap a button on a physical device and confirm both events in the dashboard.
+
 ## What you can try
 
 | Action | SDK API |
