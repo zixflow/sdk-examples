@@ -11,6 +11,11 @@ class AppConfig {
   /// Requires platform setup — see README.
   static const bool enableLocation = true;
 
+  /// Enable Firebase push + action buttons (`lib/push_handlers.dart`).
+  /// Requires `google-services.json` / `GoogleService-Info.plist` — see README.
+  /// Or run with `--dart-define=ENABLE_PUSH=true`.
+  static const bool enablePush = false;
+
   /// Placeholder token for the Register Device Token demo button.
   /// Replace with a real FCM token after Firebase setup (see README).
   static const String demoDeviceToken = 'demo-fcm-device-token';

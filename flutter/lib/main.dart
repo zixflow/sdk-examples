@@ -1,29 +1,37 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:zixflow/zixflow.dart';
 
 import 'config.dart';
+import 'push_handlers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // ---------------------------------------------------------------------------
-  // Optional: Firebase + push notifications
+  // Optional: Firebase + push notifications (action buttons via local notifs)
   // ---------------------------------------------------------------------------
-  // Uncomment after adding Firebase to pubspec.yaml and running `flutterfire configure`:
+  // Set AppConfig.enablePush = true (or --dart-define=ENABLE_PUSH=true) after:
+  //   1. Adding google-services.json / GoogleService-Info.plist (see README)
+  //   2. Uncommenting the Google Services Gradle plugin + POST_NOTIFICATIONS
+  //   3. Optionally running `flutterfire configure` for firebase_options.dart
   //
-  // import 'package:firebase_core/firebase_core.dart';
-  // import 'package:firebase_messaging/firebase_messaging.dart';
-  // import 'firebase_options.dart';
-  //
-  // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-  //   alert: true,
-  //   badge: true,
-  //   sound: true,
-  // );
-  //
-  // Place `google-services.json` in android/app/ and `GoogleService-Info.plist`
-  // in ios/Runner/. See README for platform setup.
+  // Demo stays runnable with enablePush == false (default).
+  if (AppConfig.enablePush) {
+    try {
+      // Uses native google-services.json / GoogleService-Info.plist when present.
+      // If you generated firebase_options.dart via FlutterFire CLI, you can instead:
+      //   import 'firebase_options.dart';
+      //   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      await Firebase.initializeApp();
+      debugPrint('[ZixflowDemo] Firebase initialized');
+    } catch (e, st) {
+      debugPrint(
+        '[ZixflowDemo] Firebase init failed — add Firebase config files '
+        'or set enablePush=false. Error: $e\n$st',
+      );
+    }
+  }
 
   final config = ZixflowConfig(
     apiKey: AppConfig.zixflowApiKey,
@@ -35,11 +43,9 @@ Future<void> main() async {
 
   await Zixflow.initialize(config: config);
 
-  // Optional: register FCM token after Firebase is initialized (see push docs).
-  // final token = await FirebaseMessaging.instance.getToken();
-  // if (token != null) {
-  //   Zixflow.instance.registerDeviceToken(deviceToken: token);
-  // }
+  if (AppConfig.enablePush && Firebase.apps.isNotEmpty) {
+    await PushHandlers.initialize();
+  }
 
   runApp(const ZixflowDemoApp());
 }
@@ -173,6 +179,15 @@ class _DemoHomePageState extends State<DemoHomePage> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
+          if (AppConfig.enablePush)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Push enabled (Firebase). Identify a user, then send a test '
+                'push with action_buttons from the Zixflow dashboard.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
           const Divider(height: 1),
           Expanded(
             child: ListView.separated(
