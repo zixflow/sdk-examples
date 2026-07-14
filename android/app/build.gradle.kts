@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.zixflow.demo"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.zixflow.demo"
         minSdk = 21
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
     }
@@ -34,15 +34,6 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
-    }
-}
-
-configurations.configureEach {
-    resolutionStrategy {
-        // Keep androidx.core on 1.15.x so AGP 8.7 / compileSdk 35 stay compatible
-        // (transitive deps may otherwise pull 1.17+, which needs compileSdk 36 + AGP 8.9+)
-        force("androidx.core:core:1.15.0")
-        force("androidx.core:core-ktx:1.15.0")
     }
 }
 
