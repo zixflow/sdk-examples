@@ -12,6 +12,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     UNUserNotificationCenter.current().delegate = self
+    registerPushActionCategories()
 
     MessagingPushAPN.initialize(
       withConfig: MessagingPushConfigBuilder()
@@ -19,6 +20,22 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     )
 
     return true
+  }
+
+  /// Zixflow campaigns with action buttons use category `ZX_2BTN` (`ACTION_0` / `ACTION_1`).
+  /// The SDK does not auto-register categories — the app must.
+  private func registerPushActionCategories() {
+    let actions = [
+      UNNotificationAction(identifier: "ACTION_0", title: "Action 1", options: .foreground),
+      UNNotificationAction(identifier: "ACTION_1", title: "Action 2", options: .foreground),
+    ]
+    let category = UNNotificationCategory(
+      identifier: "ZX_2BTN",
+      actions: actions,
+      intentIdentifiers: [],
+      options: []
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([category])
   }
 }
 

@@ -10,6 +10,7 @@ Docs: [Quick Start](https://docs.zixflow.com/documentation/sdk/react-native/quic
 |------|---------|
 | `App.tsx` | Demo UI and all `Zixflow.*` calls |
 | `src/config.ts` | API key and `ZixflowConfig` |
+| `src/pushActions.ts` | `parseActionButtons` / `trackActionClick` helpers |
 | `native-snippets/` | Critical Android/iOS integration snippets |
 | `package.json` | Depends on `zixflow-reactnative@^1.1.3` |
 
@@ -121,6 +122,20 @@ npm run android  # emulator or device
 
 - **Push** — Requires platform setup (APNs or FCM), dashboard credentials, and `identify()` before targeted sends. See `native-snippets/`.
 - **Location** — Optional native module; enable Podfile subspec (iOS) and `zixflow_location_enabled=true` (Android). Your app must request OS location permission.
+
+## Push action buttons
+
+1. **Identify** the user, grant push permission, and confirm a registered device token.
+2. In the Zixflow dashboard, send a test push with **two action buttons** (`action_buttons` JSON) and iOS category `ZX_2BTN`.
+3. On a **physical device**, tap an action button.
+4. Confirm **Opened** then **Push Notification Action Clicked** in campaign analytics.
+
+### Platform notes
+
+| Platform | What this demo does |
+|----------|---------------------|
+| **iOS** | `AppDelegate` (and APN/FCM snippets) register `ZX_2BTN` with `ACTION_0` / `ACTION_1`. Use `src/pushActions.ts` (`parseActionButtons`, `trackActionClick`) when action payloads reach JS. |
+| **Android** | The RN bridge does **not** expose `setNotificationCallback` from JS today (only `pushClickBehavior`). Copy `native-snippets/android/PushActionButtons.kt` (+ `NotificationActionReceiver.kt`) and wire `MessagingPushModuleConfig.setNotificationCallback` in native code. See the working app under `sdk-examples/android/`. |
 
 ## Secrets (do not commit)
 

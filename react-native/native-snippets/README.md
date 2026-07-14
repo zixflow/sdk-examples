@@ -57,6 +57,26 @@ zixflow_location_enabled=true
 See `android/MainApplication.kt` in this folder. Zixflow auto-links via React Native;
 no manual package registration is required for the core SDK.
 
+### Push action buttons (Android gap)
+
+The React Native Android bridge configures `pushClickBehavior` only — it does
+**not** call `MessagingPushModuleConfig.setNotificationCallback`. Named action
+buttons therefore cannot be attached from JavaScript today.
+
+To add buttons on Android:
+
+1. Copy `android/PushActionButtons.kt` and `android/NotificationActionReceiver.kt`
+   into your app package.
+2. Register the receiver in `AndroidManifest.xml` (`exported=false`, action
+   `com.zixflow.demo.PUSH_NOTIFICATION_ACTION`).
+3. Wire `MessagingPushModuleConfig.Builder().setNotificationCallback(...)` so
+   `onNotificationComposed` calls `PushActionButtons.attach(payload, builder, context)`.
+
+See the working native app under `sdk-examples/android/`
+(`MainApplication.kt` + action helpers). Until the RN package passes
+`notificationCallback` from JS, use that pattern (or the snippets above) for
+Android action buttons.
+
 ## iOS
 
 ### Podfile — APNs (iOS-only push)
@@ -98,12 +118,14 @@ cd ios && pod install
 ### AppDelegate (APNs)
 
 See `ios/AppDelegate.swift.apn`. Enable Push Notifications and Background Modes
-(Remote notifications) in Xcode.
+(Remote notifications) in Xcode. Snippets register the `ZX_2BTN` category
+(`ACTION_0` / `ACTION_1`) at launch so dashboard action buttons can appear.
 
 ### AppDelegate (FCM)
 
 See `ios/AppDelegate.swift.fcm`. Add `GoogleService-Info.plist` to the Xcode
-project (never commit real files).
+project (never commit real files). Same `ZX_2BTN` registration as the APNs
+snippet.
 
 ### Rich push (optional)
 

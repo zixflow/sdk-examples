@@ -1,4 +1,5 @@
 import UIKit
+import UserNotifications
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
@@ -14,6 +15,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    registerPushActionCategories()
+
     let delegate = ReactNativeDelegate()
     let factory = RCTReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -30,6 +33,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
 
     return true
+  }
+
+  /// Zixflow campaigns with action buttons use category `ZX_2BTN` (`ACTION_0` / `ACTION_1`).
+  /// The SDK does not auto-register categories — the app must.
+  private func registerPushActionCategories() {
+    let actions = [
+      UNNotificationAction(identifier: "ACTION_0", title: "Action 1", options: .foreground),
+      UNNotificationAction(identifier: "ACTION_1", title: "Action 2", options: .foreground),
+    ]
+    let category = UNNotificationCategory(
+      identifier: "ZX_2BTN",
+      actions: actions,
+      intentIdentifiers: [],
+      options: []
+    )
+    UNUserNotificationCenter.current().setNotificationCategories([category])
   }
 }
 

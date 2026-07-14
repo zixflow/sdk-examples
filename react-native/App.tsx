@@ -16,9 +16,16 @@ import {
   buildZixflowConfig,
   isApiKeyConfigured,
 } from './src/config';
+import {
+  parseActionButtons,
+  trackActionClick,
+} from './src/pushActions';
 
 const DEMO_USER_ID = 'user-123';
 const DEMO_TOKEN_PLACEHOLDER = 'paste-fcm-or-apns-token-here';
+
+// Exported helpers used when action-button payloads reach JS (iOS / local notifs).
+export { parseActionButtons, trackActionClick };
 
 export default function App() {
   const [log, setLog] = useState<string[]>([]);
@@ -46,6 +53,9 @@ export default function App() {
         await Zixflow.initialize(config);
         setInitialized(true);
         appendLog('Zixflow SDK initialized');
+        appendLog(
+          'Action-button helpers ready (parseActionButtons / trackActionClick). Test buttons from the dashboard; iOS registers ZX_2BTN in AppDelegate.',
+        );
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error);
@@ -215,6 +225,13 @@ export default function App() {
       <View style={styles.statusBox}>
         <Text style={styles.statusLabel}>Status</Text>
         <Text style={styles.statusText}>{statusText}</Text>
+        {initialized ? (
+          <Text style={styles.statusNote}>
+            Action buttons: send a dashboard push with two buttons. iOS uses
+            ZX_2BTN (AppDelegate). Android needs native
+            setNotificationCallback — see native-snippets/android/.
+          </Text>
+        ) : null}
       </View>
 
       <Section title="Core">
@@ -245,6 +262,12 @@ export default function App() {
           installed, the SDK auto-fetches FCM on init — you usually only need
           Identify + permission. Use Register only to re-send or paste a custom
           token. See README and native-snippets/.
+        </Text>
+        <Text style={styles.hint}>
+          Action buttons: send a dashboard push with `action_buttons` (and
+          `aps.category` = ZX_2BTN on iOS). Helpers live in `src/pushActions.ts`.
+          Android buttons need the native snippet + setNotificationCallback —
+          the RN package does not expose that from JS today.
         </Text>
         <View style={styles.grid}>
           <ActionButton
@@ -376,6 +399,12 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 14,
     color: '#0f172a',
+  },
+  statusNote: {
+    fontSize: 12,
+    color: '#64748b',
+    lineHeight: 17,
+    marginTop: 8,
   },
   section: {
     backgroundColor: '#ffffff',
