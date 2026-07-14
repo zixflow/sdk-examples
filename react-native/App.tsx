@@ -54,7 +54,7 @@ export default function App() {
         setInitialized(true);
         appendLog('Zixflow SDK initialized');
         appendLog(
-          'Action-button helpers ready (parseActionButtons / trackActionClick). Test buttons from the dashboard; iOS registers ZX_2BTN in AppDelegate.',
+          'Action buttons: iOS ZX_2BTN in AppDelegate; Android installs onNotificationComposed after init (PushActionButtonsInstaller).',
         );
       } catch (error) {
         const message =
@@ -228,8 +228,8 @@ export default function App() {
         {initialized ? (
           <Text style={styles.statusNote}>
             Action buttons: send a dashboard push with two buttons. iOS uses
-            ZX_2BTN (AppDelegate). Android needs native
-            setNotificationCallback — see native-snippets/android/.
+            ZX_2BTN (AppDelegate). Android installs onNotificationComposed via
+            PushActionButtonsInstaller after SDK init.
           </Text>
         ) : null}
       </View>
@@ -266,8 +266,8 @@ export default function App() {
         <Text style={styles.hint}>
           Action buttons: send a dashboard push with `action_buttons` (and
           `aps.category` = ZX_2BTN on iOS). Helpers live in `src/pushActions.ts`.
-          Android buttons need the native snippet + setNotificationCallback —
-          the RN package does not expose that from JS today.
+          This Android demo wires buttons natively after init
+          (PushActionButtonsInstaller); see README / native-snippets.
         </Text>
         <View style={styles.grid}>
           <ActionButton

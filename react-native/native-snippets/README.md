@@ -57,25 +57,25 @@ zixflow_location_enabled=true
 See `android/MainApplication.kt` in this folder. Zixflow auto-links via React Native;
 no manual package registration is required for the core SDK.
 
-### Push action buttons (Android gap)
+### Push action buttons (Android)
 
 The React Native Android bridge configures `pushClickBehavior` only — it does
-**not** call `MessagingPushModuleConfig.setNotificationCallback`. Named action
-buttons therefore cannot be attached from JavaScript today.
+**not** call `MessagingPushModuleConfig.setNotificationCallback` from JS.
 
-To add buttons on Android:
+**This demo app already wires buttons** under
+`android/app/src/main/java/com/zixflow/demo/` (`PushActionButtonsInstaller`,
+`PushActionButtons`, `NotificationActionReceiver`) after JS `Zixflow.initialize`.
+
+To add the same to your own app:
 
 1. Copy `android/PushActionButtons.kt` and `android/NotificationActionReceiver.kt`
    into your app package.
 2. Register the receiver in `AndroidManifest.xml` (`exported=false`, action
    `com.zixflow.demo.PUSH_NOTIFICATION_ACTION`).
-3. Wire `MessagingPushModuleConfig.Builder().setNotificationCallback(...)` so
-   `onNotificationComposed` calls `PushActionButtons.attach(payload, builder, context)`.
-
-See the working native app under `sdk-examples/android/`
-(`MainApplication.kt` + action helpers). Until the RN package passes
-`notificationCallback` from JS, use that pattern (or the snippets above) for
-Android action buttons.
+3. After SDK init, register a `ModuleMessagingPushFCM` whose
+   `MessagingPushModuleConfig` uses `setNotificationCallback` →
+   `PushActionButtons.attach` (see `PushActionButtonsInstaller` in the demo app,
+   or `sdk-examples/android/MainApplication.kt` for native-only init).
 
 ## iOS
 

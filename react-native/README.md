@@ -135,7 +135,7 @@ npm run android  # emulator or device
 | Platform | What this demo does |
 |----------|---------------------|
 | **iOS** | `AppDelegate` (and APN/FCM snippets) register `ZX_2BTN` with `ACTION_0` / `ACTION_1`. Use `src/pushActions.ts` (`parseActionButtons`, `trackActionClick`) when action payloads reach JS. |
-| **Android** | The RN bridge does **not** expose `setNotificationCallback` from JS today (only `pushClickBehavior`). Copy `native-snippets/android/PushActionButtons.kt` (+ `NotificationActionReceiver.kt`) and wire `MessagingPushModuleConfig.setNotificationCallback` in native code. See the working app under `sdk-examples/android/`. |
+| **Android** | The RN bridge does **not** expose `setNotificationCallback` from JS (only `pushClickBehavior`). This demo wires it in native Kotlin after JS `initialize`: `PushActionButtonsInstaller` + `PushActionButtons` + `NotificationActionReceiver` under `android/app/.../com/zixflow/demo/`. Snippets for other apps: `native-snippets/android/`. |
 
 ## Secrets (do not commit)
 

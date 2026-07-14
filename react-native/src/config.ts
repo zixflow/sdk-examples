@@ -1,6 +1,7 @@
 import {
   ZixflowConfig,
   ZixflowLogLevel,
+  PushClickBehaviorAndroid,
 } from 'zixflow-reactnative';
 
 /**
@@ -19,5 +20,13 @@ export function buildZixflowConfig(): ZixflowConfig {
     logLevel: ZixflowLogLevel.Debug,
     autoTrackDeviceAttributes: true,
     trackApplicationLifecycleEvents: true,
+    // Registers ModuleMessagingPushFCM on Android. Action buttons are attached
+    // in native code (PushActionButtonsInstaller) because the RN bridge does
+    // not expose setNotificationCallback from JS.
+    push: {
+      android: {
+        pushClickBehavior: PushClickBehaviorAndroid.ActivityPreventRestart,
+      },
+    },
   };
 }
