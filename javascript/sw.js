@@ -1,4 +1,4 @@
-// public/sw.js — minimal web push worker (prefer the full SDK worker for automatic tracking)
+// sw.js — minimal web push worker (prefer the full SDK worker from the npm package for automatic tracking)
 self.addEventListener('install', () => {
   self.skipWaiting()
 })

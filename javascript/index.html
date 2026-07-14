@@ -4,9 +4,67 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Zixflow Browser SDK Example</title>
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <main>
+      <header>
+        <h1>Zixflow Browser SDK</h1>
+        <p>
+          Feature demo for identify, track, page, screen, group, alias, reset,
+          and web push (@zixflow/analytics-browser via jsDelivr — no build step).
+        </p>
+      </header>
+
+      <div class="status" id="status">Initializing…</div>
+
+      <section class="panel">
+        <h2>Core</h2>
+        <div class="grid">
+          <button type="button" data-action="identify">Identify</button>
+          <button type="button" data-action="track">Track</button>
+          <button type="button" data-action="page">Page</button>
+          <button type="button" data-action="screen">Screen</button>
+          <button type="button" data-action="group">Group</button>
+          <button type="button" data-action="alias">Alias</button>
+          <button type="button" data-action="reset" class="secondary">Reset</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Browser helpers</h2>
+        <div class="grid">
+          <button type="button" data-action="ready">Ready</button>
+          <button type="button" data-action="user">User()</button>
+          <button type="button" data-action="anon">Set anonymous ID</button>
+          <button type="button" data-action="debug">Toggle debug</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Web push</h2>
+        <div class="grid">
+          <button type="button" data-action="push-sub">Subscribe to push</button>
+          <button type="button" data-action="push-unsub" class="secondary">
+            Unsubscribe
+          </button>
+        </div>
+        <p class="hint">
+          Web push needs HTTPS or <code>http://localhost</code> (service workers
+          are blocked on <code>file://</code>). For push only, run
+          <code>./serve.sh</code>.
+        </p>
+      </section>
+
+      <section class="panel">
+        <h2>Log</h2>
+        <div id="log"></div>
+      </section>
+    </main>
+
+    <script src="./config.js"></script>
+    <script src="./cdn-path-fix.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zixflow/analytics-browser@1.1.5/dist/umd/index.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
