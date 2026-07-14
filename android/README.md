@@ -32,10 +32,18 @@ Then uncomment the Google Services plugin lines in `build.gradle.kts` files (see
 | Device token | `registerDeviceToken` / `deleteDeviceToken` / `registeredDeviceToken` |
 | Logout | `clearIdentify()` |
 
-Init enables `ModuleMessagingPushFCM` and `ModuleLocation` when `Config.enableOptionalModules` is true (default).
+Init enables `ModuleMessagingPushFCM` and `ModuleLocation` when `Config.enableOptionalModules` is true (default). Push action buttons are wired via `MessagingPushModuleConfig.setNotificationCallback` → `PushActionButtons.attach` (parses `action_buttons`, `NotificationCompat.addAction`) and `NotificationActionReceiver` (tracks Opened then `Push Notification Action Clicked`).
 
 ## Verify
 
 1. Tap **Identify**, then **Track** / **Screen**.
 2. Confirm events in the Zixflow dashboard for `user@example.com`.
 3. Push requires a physical device + real `google-services.json`.
+
+### Action buttons
+
+1. Identify a user and confirm the device token is registered (use **Show token**).
+2. From the Zixflow dashboard, send a push with two action buttons (payload includes `action_buttons` JSON).
+3. On the device, expand the notification and tap a button.
+4. Confirm in the dashboard: **Opened** metric, then event `Push Notification Action Clicked` with `action_index` / `action_name` / `action_deeplink`.
+5. If the button has a non-empty deeplink, the app opens it via `Intent.ACTION_VIEW`.

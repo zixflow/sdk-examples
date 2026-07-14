@@ -23,5 +23,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".NotificationActionReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.zixflow.demo.PUSH_NOTIFICATION_ACTION" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>
