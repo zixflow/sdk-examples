@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
+  Clipboard,
   ScrollView,
   StyleSheet,
   Text,
@@ -20,6 +21,7 @@ import {
   parseActionButtons,
   trackActionClick,
 } from './src/pushActions';
+import { PushHandlers } from './src/pushHandlers';
 
 const DEMO_USER_ID = 'user-123';
 const DEMO_TOKEN_PLACEHOLDER = 'paste-fcm-or-apns-token-here';
@@ -31,6 +33,7 @@ export default function App() {
   const [log, setLog] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [deviceTokenInput, setDeviceTokenInput] = useState('');
+  const [fcmToken, setFcmToken] = useState<string | undefined>(undefined);
 
   const appendLog = useCallback((message: string) => {
     const stamp = new Date().toLocaleTimeString();
@@ -53,8 +56,10 @@ export default function App() {
         await Zixflow.initialize(config);
         setInitialized(true);
         appendLog('Zixflow SDK initialized');
+        await PushHandlers.initialize();
+        setFcmToken(PushHandlers.fcmToken);
         appendLog(
-          'Action buttons: iOS ZX_2BTN in AppDelegate; Android installs onNotificationComposed after init (PushActionButtonsInstaller).',
+          'Push handling initialized (pure JS: @react-native-firebase/messaging + notifee). Action buttons: iOS ZX_2BTN in AppDelegate.',
         );
       } catch (error) {
         const message =
@@ -228,11 +233,31 @@ export default function App() {
         {initialized ? (
           <Text style={styles.statusNote}>
             Action buttons: send a dashboard push with two buttons. iOS uses
-            ZX_2BTN (AppDelegate). Android installs onNotificationComposed via
-            PushActionButtonsInstaller after SDK init.
+            ZX_2BTN (AppDelegate). Android displays notifications (with
+            buttons) via @react-native-firebase/messaging + notifee in pure JS
+            (src/pushHandlers.ts) — no custom native code.
           </Text>
         ) : null}
       </View>
+
+      {fcmToken ? (
+        <View style={styles.tokenBox}>
+          <View style={styles.tokenHeaderRow}>
+            <Text style={styles.statusLabel}>FCM Token</Text>
+            <ActionButton
+              label="Copy"
+              onPress={() => {
+                Clipboard.setString(fcmToken);
+                appendLog('FCM token copied to clipboard');
+              }}
+              secondary
+            />
+          </View>
+          <Text selectable style={styles.tokenText}>
+            {fcmToken}
+          </Text>
+        </View>
+      ) : null}
 
       <Section title="Core">
         <View style={styles.grid}>
@@ -255,19 +280,19 @@ export default function App() {
         </View>
       </Section>
 
-      <Section title="Push (native setup required)">
+      <Section title="Push">
         <Text style={styles.hint}>
           Recommended order: 1) Identify 2) Request push permission 3) Get
           registered token. With Android `google-services.json` (client config)
           installed, the SDK auto-fetches FCM on init — you usually only need
           Identify + permission. Use Register only to re-send or paste a custom
-          token. See README and native-snippets/.
+          token.
         </Text>
         <Text style={styles.hint}>
           Action buttons: send a dashboard push with `action_buttons` (and
-          `aps.category` = ZX_2BTN on iOS). Helpers live in `src/pushActions.ts`.
-          This Android demo wires buttons natively after init
-          (PushActionButtonsInstaller); see README / native-snippets.
+          `aps.category` = ZX_2BTN on iOS). Android notification display +
+          action-button handling lives entirely in `src/pushHandlers.ts`
+          (pure JS, no custom native code) using notifee.
         </Text>
         <View style={styles.grid}>
           <ActionButton
@@ -405,6 +430,25 @@ const styles = StyleSheet.create({
     color: '#64748b',
     lineHeight: 17,
     marginTop: 8,
+  },
+  tokenBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  tokenHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tokenText: {
+    fontSize: 11,
+    color: '#0f172a',
+    fontFamily: 'monospace',
+    marginTop: 6,
   },
   section: {
     backgroundColor: '#ffffff',

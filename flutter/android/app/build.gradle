@@ -2,18 +2,21 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    // Uncomment after adding google-services.json (Firebase / push setup):
-    // id "com.google.gms.google-services"
+    // Firebase / push setup — applies since google-services.json is present:
+    id "com.google.gms.google-services"
 }
 
 android {
     namespace 'com.zixflow.demo'
-    compileSdk flutter.compileSdkVersion
-    ndkVersion flutter.ndkVersion
+    // zixflow / firebase plugins require compileSdk 36 and NDK 27
+    compileSdk 36
+    ndkVersion "27.0.12077973"
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        // Required by flutter_local_notifications
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
@@ -21,7 +24,9 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.zixflow.demo"
+        // Must match android_client_info.package_name in google-services.json
+        // (the real Firebase-registered package) or FCM token registration fails.
+        applicationId "com.company.zixflow"
         minSdkVersion flutter.minSdkVersion
         targetSdkVersion flutter.targetSdkVersion
         versionCode 1
@@ -35,8 +40,10 @@ android {
     }
 }
 
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+}
+
 flutter {
     source '../..'
 }
-
-dependencies {}

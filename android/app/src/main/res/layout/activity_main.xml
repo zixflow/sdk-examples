@@ -24,6 +24,30 @@
             android:paddingBottom="16dp"
             android:text="Ready" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Device Token"
+            android:textStyle="bold"
+            android:paddingTop="8dp" />
+
+        <TextView
+            android:id="@+id/tokenValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:textIsSelectable="true"
+            android:fontFamily="monospace"
+            android:textSize="12sp"
+            android:text="Not yet registered" />
+
+        <Button
+            android:id="@+id/btnCopyToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Copy device token" />
+
         <Button android:id="@+id/btnIdentify" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Identify" />
         <Button android:id="@+id/btnTrack" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Track" />
         <Button android:id="@+id/btnScreen" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Screen" />

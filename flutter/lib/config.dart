@@ -13,11 +13,11 @@ class AppConfig {
   static const bool enableLocation = true;
 
   /// When `true`, initializes Firebase + push handlers (FCM + action buttons).
-  /// Keep `false` unless you have added Firebase config files — see README.
-  /// Override at run time with `--dart-define=ENABLE_PUSH=true`.
+  /// Defaults to `true` since `google-services.json` is bundled — see README.
+  /// Override at run time with `--dart-define=ENABLE_PUSH=false`.
   static const bool enablePush = bool.fromEnvironment(
     'ENABLE_PUSH',
-    defaultValue: false,
+    defaultValue: true,
   );
 
   static const String demoDeviceToken = 'demo-fcm-device-token';

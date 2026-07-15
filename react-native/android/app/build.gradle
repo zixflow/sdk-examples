@@ -79,7 +79,9 @@ android {
 
     namespace "com.zixflow.demo"
     defaultConfig {
-        applicationId "com.zixflow.demo"
+        // Must match android_client_info.package_name in google-services.json
+        // (the real Firebase-registered package) or FCM token registration fails.
+        applicationId "com.company.zixflow"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

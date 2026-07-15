@@ -50,7 +50,29 @@ object PushActionButtons {
         builder: NotificationCompat.Builder,
         context: Context
     ) {
-        val buttons = parseActionButtons(payload.extras.getString("action_buttons"))
+        attachFromRawData(
+            deliveryId = payload.zixflowDeliveryId,
+            deliveryToken = payload.zixflowDeliveryToken,
+            actionButtonsJson = payload.extras.getString("action_buttons"),
+            builder = builder,
+            context = context
+        )
+    }
+
+    /**
+     * Same as [attach] but for pushes handled manually (not via the SDK's
+     * [ZixflowParsedPushPayload]) — e.g. the fallback path in
+     * [CustomFirebaseMessagingService] for pushes the SDK's own delivery-ID/token
+     * casing check fails to recognize (see BUG-A12).
+     */
+    fun attachFromRawData(
+        deliveryId: String?,
+        deliveryToken: String?,
+        actionButtonsJson: String?,
+        builder: NotificationCompat.Builder,
+        context: Context
+    ) {
+        val buttons = parseActionButtons(actionButtonsJson)
         if (buttons.isEmpty()) return
 
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -58,8 +80,8 @@ object PushActionButtons {
         buttons.forEachIndexed { index, button ->
             val intent = Intent(context, NotificationActionReceiver::class.java).apply {
                 action = ACTION_CLICK
-                putExtra(EXTRA_DELIVERY_ID, payload.zixflowDeliveryId)
-                putExtra(EXTRA_DELIVERY_TOKEN, payload.zixflowDeliveryToken)
+                putExtra(EXTRA_DELIVERY_ID, deliveryId)
+                putExtra(EXTRA_DELIVERY_TOKEN, deliveryToken)
                 putExtra(EXTRA_ACTION_INDEX, index)
                 putExtra(EXTRA_ACTION_NAME, button.name)
                 putExtra(EXTRA_ACTION_DEEPLINK, button.deeplink)

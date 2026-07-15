@@ -11,9 +11,18 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   zixflow: ^1.1.5
-  firebase_core: ^4.12.0
-  firebase_messaging: ^16.4.2
-  flutter_local_notifications: ^22.0.1
+  firebase_core: ^3.8.1
+  firebase_messaging: ^15.1.5
+  flutter_local_notifications: ^18.0.0
+
+  # Push rich media: download image_url/large_icon_url to a temp file for
+  # BigPictureStyle (Android) / attachments (iOS).
+  http: ^1.2.0
+  path_provider: ^2.1.0
+
+  # Opens the `deeplink_url` / action button deeplink when a notification
+  # (or action button) is tapped.
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

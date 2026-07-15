@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:zixflow/zixflow.dart';
 
 import 'config.dart';
@@ -152,6 +153,11 @@ class _DemoHomePageState extends State<DemoHomePage> {
     _setStatus('deleteDeviceToken() sent');
   }
 
+  void _copyFcmToken(String token) {
+    Clipboard.setData(ClipboardData(text: token));
+    _setStatus('FCM token copied to clipboard');
+  }
+
   @override
   Widget build(BuildContext context) {
     final actions = <({String label, VoidCallback onPressed})>[
@@ -186,6 +192,52 @@ class _DemoHomePageState extends State<DemoHomePage> {
                 'Push enabled (Firebase). Identify a user, then send a test '
                 'push with action_buttons from the Zixflow dashboard.',
                 style: TextStyle(fontSize: 12),
+              ),
+            ),
+          if (AppConfig.enablePush)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: ValueListenableBuilder<String?>(
+                valueListenable: PushHandlers.fcmToken,
+                builder: (context, token, _) {
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'FCM Token',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelMedium
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            if (token != null)
+                              IconButton(
+                                icon: const Icon(Icons.copy, size: 18),
+                                tooltip: 'Copy FCM token',
+                                onPressed: () => _copyFcmToken(token),
+                              ),
+                          ],
+                        ),
+                        SelectableText(
+                          token ?? 'Fetching token…',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontFamily: 'monospace',
+                              ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           const Divider(height: 1),

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -17,6 +18,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.ZixflowSdkExample">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -31,5 +33,23 @@
                 <action android:name="com.zixflow.demo.PUSH_NOTIFICATION_ACTION" />
             </intent-filter>
         </receiver>
+
+        <!-- Only one FirebaseMessagingService can be routed FCM messages per app.
+             Remove the SDK's own service (declared in messaging-push-fcm's manifest)
+             and use ours instead: it first tries the SDK's own onMessageReceived
+             (com.zixflow.messagingpush.ZixflowFirebaseMessagingService), then falls
+             back to manual handling for pushes the SDK doesn't recognize
+             (see BUG-A12 in extra-docs/ANDROID_SDK_BUGS.md). -->
+        <service
+            android:name="com.zixflow.messagingpush.ZixflowFirebaseMessagingService"
+            tools:node="remove" />
+
+        <service
+            android:name=".CustomFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

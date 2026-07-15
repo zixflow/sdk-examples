@@ -1,8 +1,12 @@
 import SwiftUI
+import UIKit
 import ZixflowDataPipelines
 
 struct ContentView: View {
     @State private var status = "Ready"
+    @State private var deviceToken: String?
+
+    private let tokenPollTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationView {
@@ -15,6 +19,24 @@ struct ContentView: View {
                     Text(status)
                         .font(.footnote)
                         .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Device Token")
+                            .font(.headline)
+                        Text(deviceToken ?? "Not yet registered")
+                            .font(.system(.footnote, design: .monospaced))
+                            .textSelection(.enabled)
+                        Button("Copy device token") {
+                            guard let token = deviceToken else {
+                                status = "No device token registered yet"
+                                return
+                            }
+                            UIPasteboard.general.string = token
+                            status = "Device token copied to clipboard"
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .frame(maxWidth: .infinity)
+                    }
 
                     Group {
                         action("Identify") {
@@ -105,6 +127,12 @@ struct ContentView: View {
             .navigationTitle("Zixflow iOS SDK")
             .onAppear {
                 Zixflow.shared.screen(title: "Home")
+                deviceToken = Zixflow.shared.registeredDeviceToken
+            }
+            .onReceive(tokenPollTimer) { _ in
+                if deviceToken == nil {
+                    deviceToken = Zixflow.shared.registeredDeviceToken
+                }
             }
         }
     }
