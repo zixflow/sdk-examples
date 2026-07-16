@@ -312,6 +312,9 @@ Future<void> _showLocalNotification(
   final largeIconUrl = data['large_icon_url']?.toString();
   final soundName = data['sound']?.toString();
   final badgeNumber = int.tryParse(data['badge']?.toString() ?? '');
+  // "sticky": true keeps the notification visible after it's tapped (mirrors FCM's own
+  // AndroidNotification.sticky) — Android only, no iOS equivalent.
+  final sticky = data['sticky']?.toString() == 'true';
   final id = message.hashCode;
 
   // Download rich media concurrently (Android BigPictureStyle / iOS attachment).
@@ -360,6 +363,7 @@ Future<void> _showLocalNotification(
         largeIconPath != null ? FilePathAndroidBitmap(largeIconPath) : null,
     playSound: androidSound != null,
     sound: androidSound,
+    autoCancel: !sticky,
   );
 
   final iosAttachments = <DarwinNotificationAttachment>[

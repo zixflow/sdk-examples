@@ -8,6 +8,10 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# Firebase (used by @react-native-firebase/*) ships Swift pods that depend on
+# GoogleUtilities, which does not define modules. Required when linking statically.
+use_modular_headers!
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -30,5 +34,14 @@ target 'ZixflowRNDemo' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Workaround for Xcode 16+/26 "Redefinition of module 'react_runtime'" /
+    # "Could not build module" errors caused by the explicit modules build
+    # system colliding with React Native's C++ module maps.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        build_config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+      end
+    end
   end
 end

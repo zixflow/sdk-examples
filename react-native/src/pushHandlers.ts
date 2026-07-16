@@ -88,11 +88,21 @@ async function showNotification(
       ? data.sound
       : undefined;
   const badgeCount = data.badge != null ? parseInt(data.badge, 10) : undefined;
+  // "sticky": true keeps the notification visible after it's tapped (mirrors FCM's own
+  // AndroidNotification.sticky) — Android only, no iOS equivalent.
+  const sticky = data.sticky === 'true';
 
   if (badgeCount != null && !Number.isNaN(badgeCount)) {
     notifee.setBadgeCount(badgeCount).catch(() => {});
   }
 
+  const hasBadge = badgeCount != null && !Number.isNaN(badgeCount);
+
+  // notifee's validators check for key *presence* (`hasOwnProperty`), not just
+  // truthiness — so `sound: undefined` / `badgeCount: undefined` / `largeIcon:
+  // undefined` still fail validation ("must be a string/number value if
+  // specified") because the key exists on the object. Conditionally spread
+  // each optional field so the key is omitted entirely when there's no value.
   await notifee.displayNotification({
     title,
     body,
@@ -102,20 +112,19 @@ async function showNotification(
       importance: AndroidImportance.HIGH,
       pressAction: { id: 'default' },
       actions: buildNotifeeActions(data),
-      largeIcon: isValidImageUrl(data.large_icon_url)
-        ? data.large_icon_url
-        : undefined,
-      style: isValidImageUrl(data.image_url)
-        ? { type: AndroidStyle.BIGPICTURE, picture: data.image_url }
-        : undefined,
-      sound: soundName,
+      ...(isValidImageUrl(data.large_icon_url)
+        ? { largeIcon: data.large_icon_url }
+        : {}),
+      ...(isValidImageUrl(data.image_url)
+        ? { style: { type: AndroidStyle.BIGPICTURE, picture: data.image_url } }
+        : {}),
+      ...(soundName ? { sound: soundName } : {}),
+      autoCancel: !sticky,
     },
     ios: {
       categoryId: 'ZX_2BTN',
-      sound: soundName,
-      badgeCount: badgeCount != null && !Number.isNaN(badgeCount)
-        ? badgeCount
-        : undefined,
+      ...(soundName ? { sound: soundName } : {}),
+      ...(hasBadge ? { badgeCount } : {}),
     },
   });
 }
@@ -197,6 +206,17 @@ export const PushHandlers = {
         name: ANDROID_CHANNEL_NAME,
         importance: AndroidImportance.HIGH,
       });
+    }
+
+    if (Platform.OS === 'ios') {
+      // iOS requires explicit APNs registration + permission via
+      // @react-native-firebase/messaging before `getToken()` will resolve —
+      // notifee's permission request alone does not register the device for
+      // remote messages.
+      await messaging().requestPermission();
+      if (!messaging().isDeviceRegisteredForRemoteMessages) {
+        await messaging().registerDeviceForRemoteMessages();
+      }
     }
 
     await registerToken();

@@ -133,12 +133,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         val largeIconBitmap = downloadBitmap(data["large_icon_url"])
         val badgeCount = data["badge"]?.toIntOrNull()
         val soundName = data["sound"]
+        // "sticky": true keeps the notification visible after it's tapped (FCM's own
+        // AndroidNotification.sticky semantic) — not to be confused with "ongoing"/swipe-proof.
+        val sticky = data["sticky"]?.toBooleanStrictOrNull() ?: false
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(body)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setAutoCancel(true)
+            .setAutoCancel(!sticky)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         if (largeIconBitmap != null) builder.setLargeIcon(largeIconBitmap)
