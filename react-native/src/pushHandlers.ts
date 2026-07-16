@@ -88,8 +88,11 @@ async function showNotification(
       ? data.sound
       : undefined;
   const badgeCount = data.badge != null ? parseInt(data.badge, 10) : undefined;
-  // "sticky": true keeps the notification visible after it's tapped (mirrors FCM's own
-  // AndroidNotification.sticky) — Android only, no iOS equivalent.
+  // "sticky": true means the notification survives swipe-dismiss and "Clear all", but
+  // STILL gets removed when tapped or when an action button is pressed — sticky only
+  // blocks passive dismissal, not active interaction. `autoCancel` is therefore always
+  // true below; `ongoing` is what's actually driven by `sticky`. Android only — no iOS
+  // equivalent.
   const sticky = data.sticky === 'true';
 
   if (badgeCount != null && !Number.isNaN(badgeCount)) {
@@ -119,7 +122,8 @@ async function showNotification(
         ? { style: { type: AndroidStyle.BIGPICTURE, picture: data.image_url } }
         : {}),
       ...(soundName ? { sound: soundName } : {}),
-      autoCancel: !sticky,
+      autoCancel: true,
+      ongoing: sticky,
     },
     ios: {
       categoryId: 'ZX_2BTN',
@@ -190,6 +194,14 @@ function handleNotifeeEvent(type: EventType, detail: { notification?: Notificati
   } else if (type === EventType.ACTION_PRESS && detail.pressAction) {
     trackOpened(data);
     trackActionClick(data, detail.pressAction.id);
+    // Action buttons on Android are routed through notifee's background handler, so
+    // `autoCancel` does NOT dismiss the notification for action presses (only for the
+    // default body-tap `pressAction`) — it must be cancelled explicitly. This applies
+    // regardless of `sticky`: pressing a button always removes the notification; only
+    // swipe/"Clear all" is blocked when the push was marked sticky (via `ongoing`).
+    if (detail.notification?.id) {
+      notifee.cancelNotification(detail.notification.id).catch(() => {});
+    }
   }
 }
 

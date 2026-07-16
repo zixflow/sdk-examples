@@ -133,15 +133,24 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         val largeIconBitmap = downloadBitmap(data["large_icon_url"])
         val badgeCount = data["badge"]?.toIntOrNull()
         val soundName = data["sound"]
-        // "sticky": true keeps the notification visible after it's tapped (FCM's own
-        // AndroidNotification.sticky semantic) — not to be confused with "ongoing"/swipe-proof.
+        // "sticky": true means the notification survives swipe-dismiss and "Clear all", but
+        // STILL gets removed when tapped or when an action button is pressed — sticky only
+        // blocks passive dismissal, not active interaction. setAutoCancel is therefore always
+        // true; setOngoing is what's actually driven by `sticky`.
         val sticky = data["sticky"]?.toBooleanStrictOrNull() ?: false
+        // Notification ID is generated once here so it can be reused both for `.notify()` and
+        // for the action buttons' PendingIntents — required so NotificationActionReceiver can
+        // explicitly cancel this exact notification when an action button is pressed (Android
+        // does NOT auto-dismiss for action buttons routed through a BroadcastReceiver, unlike
+        // a tap on the notification body which goes through an Activity PendingIntent).
+        val notificationId = System.currentTimeMillis().toInt()
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(body)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setAutoCancel(!sticky)
+            .setAutoCancel(true)
+            .setOngoing(sticky)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         if (largeIconBitmap != null) builder.setLargeIcon(largeIconBitmap)
@@ -169,11 +178,12 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
             deliveryId = deliveryId,
             deliveryToken = deliveryToken,
             actionButtonsJson = data["action_buttons"],
+            notificationId = notificationId,
             builder = builder,
             context = this
         )
 
-        NotificationManagerCompat.from(this).notify(System.currentTimeMillis().toInt(), builder.build())
+        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
     }
 
     /** Opens [MainActivity], which tracks the Opened metric and the deeplink on launch. */

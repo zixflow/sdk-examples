@@ -24,6 +24,12 @@ object PushActionButtons {
     const val EXTRA_ACTION_INDEX = "action_index"
     const val EXTRA_ACTION_NAME = "action_name"
     const val EXTRA_ACTION_DEEPLINK = "action_deeplink"
+    const val EXTRA_NOTIFICATION_ID = "notification_id"
+
+    /** Bundle key the SDK stores its own generated notification ID under (see
+     * `ZixflowPushNotificationHandler.NOTIFICATION_REQUEST_CODE`) — duplicated here as a
+     * plain string since that class is internal to the messagingpush module. */
+    private const val SDK_NOTIFICATION_REQUEST_CODE_KEY = "requestCode"
 
     private const val MAX_ACTIONS = 2
 
@@ -54,6 +60,7 @@ object PushActionButtons {
             deliveryId = payload.zixflowDeliveryId,
             deliveryToken = payload.zixflowDeliveryToken,
             actionButtonsJson = payload.extras.getString("action_buttons"),
+            notificationId = payload.extras.getInt(SDK_NOTIFICATION_REQUEST_CODE_KEY, 0),
             builder = builder,
             context = context
         )
@@ -64,11 +71,18 @@ object PushActionButtons {
      * [ZixflowParsedPushPayload]) — e.g. the fallback path in
      * [CustomFirebaseMessagingService] for pushes the SDK's own delivery-ID/token
      * casing check fails to recognize (see BUG-A12).
+     *
+     * [notificationId] must be the *same* ID passed to `NotificationManagerCompat.notify()`
+     * for this notification — [NotificationActionReceiver] needs it to explicitly cancel the
+     * notification when an action button is pressed (Android does not auto-dismiss for
+     * actions routed through a `BroadcastReceiver`, unlike a body tap which goes through an
+     * `Activity` `PendingIntent` and is auto-cancelled by `setAutoCancel(true)`).
      */
     fun attachFromRawData(
         deliveryId: String?,
         deliveryToken: String?,
         actionButtonsJson: String?,
+        notificationId: Int,
         builder: NotificationCompat.Builder,
         context: Context
     ) {
@@ -85,6 +99,7 @@ object PushActionButtons {
                 putExtra(EXTRA_ACTION_INDEX, index)
                 putExtra(EXTRA_ACTION_NAME, button.name)
                 putExtra(EXTRA_ACTION_DEEPLINK, button.deeplink)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             }
 
             val pendingIntent = PendingIntent.getBroadcast(

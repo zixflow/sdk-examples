@@ -48,6 +48,12 @@ object PushActionButtons {
     const val EXTRA_ACTION_INDEX = "action_index"
     const val EXTRA_ACTION_NAME = "action_name"
     const val EXTRA_ACTION_DEEPLINK = "action_deeplink"
+    const val EXTRA_NOTIFICATION_ID = "notification_id"
+
+    /** Bundle key the SDK stores its own generated notification ID under (see
+     * `ZixflowPushNotificationHandler.NOTIFICATION_REQUEST_CODE`) — duplicated here as a
+     * plain string since that class is internal to the messagingpush module. */
+    private const val SDK_NOTIFICATION_REQUEST_CODE_KEY = "requestCode"
 
     private const val MAX_ACTIONS = 2
 
@@ -77,6 +83,12 @@ object PushActionButtons {
         val buttons = parseActionButtons(payload.extras.getString("action_buttons"))
         if (buttons.isEmpty()) return
 
+        // Same ID the SDK passes to `notificationManager.notify()` — required so
+        // NotificationActionReceiver can explicitly cancel this exact notification when an
+        // action button is pressed (Android does not auto-dismiss for actions routed through
+        // a BroadcastReceiver, unlike a body tap which goes through an Activity PendingIntent).
+        val notificationId = payload.extras.getInt(SDK_NOTIFICATION_REQUEST_CODE_KEY, 0)
+
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
 
         buttons.forEachIndexed { index, button ->
@@ -87,6 +99,7 @@ object PushActionButtons {
                 putExtra(EXTRA_ACTION_INDEX, index)
                 putExtra(EXTRA_ACTION_NAME, button.name)
                 putExtra(EXTRA_ACTION_DEEPLINK, button.deeplink)
+                putExtra(EXTRA_NOTIFICATION_ID, notificationId)
             }
 
             val pendingIntent = PendingIntent.getBroadcast(

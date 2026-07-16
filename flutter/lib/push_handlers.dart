@@ -218,6 +218,14 @@ void _handleNotificationResponse(NotificationResponse response) {
 
   if (response.actionId != null && response.actionId!.isNotEmpty) {
     _trackActionClick(payload, response.actionId!);
+    // Action buttons on Android are routed through a broadcast-style handler, so
+    // `autoCancel` does NOT dismiss the notification for action presses (only for a body
+    // tap, which goes through the default content intent) — it must be cancelled explicitly.
+    // This applies regardless of `sticky`: pressing a button always removes the notification;
+    // only swipe/"Clear all" is blocked when the push was marked sticky (via `ongoing`).
+    if (response.id != null) {
+      FlutterLocalNotificationsPlugin().cancel(response.id!);
+    }
     final buttons = parseActionButtons(payload['action_buttons']);
     final actionIndex =
         int.tryParse(response.actionId!.replaceAll(RegExp(r'\D'), '')) ?? -1;
@@ -312,8 +320,11 @@ Future<void> _showLocalNotification(
   final largeIconUrl = data['large_icon_url']?.toString();
   final soundName = data['sound']?.toString();
   final badgeNumber = int.tryParse(data['badge']?.toString() ?? '');
-  // "sticky": true keeps the notification visible after it's tapped (mirrors FCM's own
-  // AndroidNotification.sticky) — Android only, no iOS equivalent.
+  // "sticky": true means the notification survives swipe-dismiss and "Clear all", but
+  // STILL gets removed when tapped or when an action button is pressed — sticky only
+  // blocks passive dismissal, not active interaction. `autoCancel` is therefore always
+  // true below; `ongoing` is what's actually driven by `sticky`. Android only — no iOS
+  // equivalent.
   final sticky = data['sticky']?.toString() == 'true';
   final id = message.hashCode;
 
@@ -363,7 +374,8 @@ Future<void> _showLocalNotification(
         largeIconPath != null ? FilePathAndroidBitmap(largeIconPath) : null,
     playSound: androidSound != null,
     sound: androidSound,
-    autoCancel: !sticky,
+    autoCancel: true,
+    ongoing: sticky,
   );
 
   final iosAttachments = <DarwinNotificationAttachment>[

@@ -5,13 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import com.zixflow.sdk.Zixflow
 import com.zixflow.sdk.events.Metric
 import com.zixflow.sdk.events.TrackMetric
 
 /**
  * Handles push notification action-button taps: tracks Opened, then
- * "Push Notification Action Clicked", and opens the button deeplink if set.
+ * "Push Notification Action Clicked", dismisses the notification, and opens
+ * the button deeplink if set.
  */
 class NotificationActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -49,6 +51,16 @@ class NotificationActionReceiver : BroadcastReceiver() {
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to track push action click", e)
+        }
+
+        // Action buttons are routed through this BroadcastReceiver, so Android's
+        // `setAutoCancel(true)` (which only fires for Activity-based content-intent taps)
+        // does NOT dismiss the notification here — it must be cancelled explicitly. This
+        // applies regardless of `sticky`: pressing an action button always removes the
+        // notification; only swipe/"Clear all" is blocked when the push was marked sticky.
+        val notificationId = intent.getIntExtra(PushActionButtons.EXTRA_NOTIFICATION_ID, -1)
+        if (notificationId != -1) {
+            NotificationManagerCompat.from(context).cancel(notificationId)
         }
 
         if (actionDeeplink.isNotEmpty()) {
