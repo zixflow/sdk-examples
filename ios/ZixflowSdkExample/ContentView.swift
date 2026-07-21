@@ -121,6 +121,26 @@ struct ContentView: View {
                             status = "reset()"
                         }
                     }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Navigation (manual test)")
+                            .font(.headline)
+                            .padding(.top, 8)
+                        Text(
+                            "These mirror the in-app screens opened automatically when a push "
+                            + "notification's deeplink is zixflowdemo://sale or "
+                            + "zixflowdemo://dashboard (body tap or action button)."
+                        )
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+
+                        action("Open Sale screen") {
+                            NavigationRouter.shared.activeScreen = .sale
+                        }
+                        action("Open Dashboard screen") {
+                            NavigationRouter.shared.activeScreen = .dashboard
+                        }
+                    }
                 }
                 .padding()
             }

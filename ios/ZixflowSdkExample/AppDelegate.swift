@@ -66,18 +66,55 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let userInfo = notification.request.content.userInfo
+        let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
+        let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
+
+        // Explicit "Delivered" tracking mirrors the Android/Flutter/RN sample apps'
+        // trackDelivered() calls, fired the moment the push arrives while the app is in the
+        // foreground. autoTrackPushEvents(true) should also track this internally, but being
+        // explicit here keeps behavior verifiable/consistent across all 4 platforms.
+        if !deliveryId.isEmpty && !deliveryToken.isEmpty {
+            MessagingPush.shared.trackMetric(
+                deliveryID: deliveryId,
+                event: .delivered,
+                deviceToken: deliveryToken
+            )
+        }
+
+        completionHandler([.banner, .sound, .badge, .list])
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        let userInfo = response.notification.request.content.userInfo
         let actionId = response.actionIdentifier
+
         guard actionId == "ACTION_0" || actionId == "ACTION_1" else {
+            // Default tap (notification body) or dismiss action.
+            if actionId == UNNotificationDefaultActionIdentifier {
+                // Body taps are auto-tracked as "Opened" by the SDK when autoTrackPushEvents(true)
+                // — no explicit trackMetric call needed here. Deeplink routing, however, is not
+                // handled by the SDK at all, so route the top-level `deeplink_url` field
+                // ourselves: in-app for zixflowdemo://sale|dashboard, external otherwise.
+                let deeplink = userInfo["deeplink_url"] as? String ?? ""
+                if !NavigationRouter.shared.open(deeplink: deeplink),
+                   !deeplink.isEmpty, let url = URL(string: deeplink) {
+                    UIApplication.shared.open(url)
+                }
+            }
             completionHandler()
             return
         }
 
-        let userInfo = response.notification.request.content.userInfo
-        let deliveryId = deliveryValue(from: userInfo, keys: ["ZIXFLOW-Delivery-ID", "Zixflow-Delivery-ID"])
-        let deliveryToken = deliveryValue(from: userInfo, keys: ["ZIXFLOW-Delivery-Token", "Zixflow-Delivery-Token"])
+        let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
+        let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
 
         // Body taps are auto-tracked when autoTrackPushEvents(true). Action-button taps are not
         // (SDK only treats UNNotificationDefaultActionIdentifier as an open).
@@ -112,7 +149,10 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             ]
         )
 
-        if !deeplink.isEmpty, let url = URL(string: deeplink) {
+        // Route in-app for zixflowdemo://sale|dashboard, external otherwise — same as the
+        // body-tap path above and matching DeeplinkRouter.kt / navigation.ts / navigation.dart.
+        if !NavigationRouter.shared.open(deeplink: deeplink),
+           !deeplink.isEmpty, let url = URL(string: deeplink) {
             UIApplication.shared.open(url)
         }
 
