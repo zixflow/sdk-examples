@@ -13,10 +13,18 @@ import {
 } from 'zixflow-reactnative';
 
 import { ActionButton } from './src/components/ActionButton';
+import { DashboardScreen } from './src/components/DashboardScreen';
+import { SaleScreen } from './src/components/SaleScreen';
 import {
   buildZixflowConfig,
   isApiKeyConfigured,
 } from './src/config';
+import {
+  getCurrentScreen,
+  navigate,
+  subscribe,
+  type ScreenName,
+} from './src/navigation';
 import {
   parseActionButtons,
   trackActionClick,
@@ -34,6 +42,9 @@ export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [deviceTokenInput, setDeviceTokenInput] = useState('');
   const [fcmToken, setFcmToken] = useState<string | undefined>(undefined);
+  const [screen, setScreen] = useState<ScreenName>(getCurrentScreen());
+
+  useEffect(() => subscribe(setScreen), []);
 
   const appendLog = useCallback((message: string) => {
     const stamp = new Date().toLocaleTimeString();
@@ -216,6 +227,13 @@ export default function App() {
       ? 'SDK initialized — tap buttons to send events'
       : 'Initializing SDK…';
 
+  if (screen === 'sale') {
+    return <SaleScreen onBack={() => navigate('home')} />;
+  }
+  if (screen === 'dashboard') {
+    return <DashboardScreen onBack={() => navigate('home')} />;
+  }
+
   return (
     <ScrollView
       contentContainerStyle={styles.container}
@@ -333,6 +351,24 @@ export default function App() {
           and zixflow_location_enabled=true (Android). Request OS permission in
           your app before calling location APIs.
         </Text>
+      </Section>
+
+      <Section title="Navigation (manual test)">
+        <Text style={styles.hint}>
+          These mirror the in-app screens opened automatically when a push
+          notification's deeplink is `zixflowdemo://sale` or
+          `zixflowdemo://dashboard` (body tap or action button).
+        </Text>
+        <View style={styles.grid}>
+          <ActionButton
+            label="Open Sale screen"
+            onPress={() => navigate('sale')}
+          />
+          <ActionButton
+            label="Open Dashboard screen"
+            onPress={() => navigate('dashboard')}
+          />
+        </View>
       </Section>
 
       <Section title="Log">

@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:zixflow/zixflow.dart';
 
 import 'config.dart';
+import 'navigation.dart';
 
 /// Parses the Zixflow `action_buttons` payload (JSON string or list).
 List<Map<String, dynamic>> parseActionButtons(dynamic raw) {
@@ -34,6 +35,7 @@ const String _androidChannelName = 'Zixflow Notifications';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   _logIncomingPush('BACKGROUND/TERMINATED', message);
+  _trackDelivered(message.data);
 
   // Fresh plugin instance for this isolate — method-channel calls are
   // stateless, so there's no need to share the foreground singleton.
@@ -182,6 +184,7 @@ class PushHandlers {
     // Foreground: show the local notification ourselves (with buttons).
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logIncomingPush('FOREGROUND', message);
+      _trackDelivered(message.data);
       _showLocalNotification(_localNotifications, message);
     });
 
@@ -251,6 +254,23 @@ void _trackOpened(Map<String, dynamic> data) {
       deliveryID: deliveryId,
       deviceToken: deliveryToken,
       event: MetricEvent.opened,
+    );
+  }
+}
+
+/// Tracks the "Push Notification Delivered" metric as soon as the data
+/// payload arrives — call this from both the foreground `onMessage` listener
+/// and the background/terminated FCM handler, before displaying the local
+/// notification.
+void _trackDelivered(Map<String, dynamic> data) {
+  final deliveryId = data['Zixflow-Delivery-ID']?.toString() ?? '';
+  final deliveryToken = data['Zixflow-Delivery-Token']?.toString() ?? '';
+
+  if (deliveryId.isNotEmpty && deliveryToken.isNotEmpty) {
+    Zixflow.instance.trackMetric(
+      deliveryID: deliveryId,
+      deviceToken: deliveryToken,
+      event: MetricEvent.delivered,
     );
   }
 }
@@ -406,11 +426,20 @@ Future<void> _showLocalNotification(
   );
 }
 
-/// Opens [deeplink] in the browser / external app (works for both `https://`
-/// URLs and custom schemes like `zixflow://`).
+/// Opens [deeplink] in-app if it matches one of this demo app's own screens
+/// (`zixflowdemo://sale`, `zixflowdemo://dashboard`); otherwise falls back to
+/// the browser / external app (works for `https://` URLs and other custom
+/// schemes).
 void _handleDeeplink(String? deeplink) {
   if (deeplink == null || deeplink.isEmpty) return;
   debugPrint('[PushHandlers] Deeplink: $deeplink');
+
+  final inAppRoute = resolveInAppRoute(deeplink);
+  if (inAppRoute != null) {
+    navigatorKey.currentState?.pushNamed(inAppRoute);
+    return;
+  }
+
   final uri = Uri.tryParse(deeplink);
   if (uri == null) return;
   launchUrl(uri, mode: LaunchMode.externalApplication).catchError((e) {

@@ -57,5 +57,15 @@
         <Button android:id="@+id/btnRegisterToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Register demo device token" />
         <Button android:id="@+id/btnDeleteToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Delete device token" />
         <Button android:id="@+id/btnClear" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Clear identify (logout)" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Navigation (manual test)"
+            android:textStyle="bold"
+            android:paddingTop="16dp" />
+
+        <Button android:id="@+id/btnOpenSale" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Open Sale screen" />
+        <Button android:id="@+id/btnOpenDashboard" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Open Dashboard screen" />
     </LinearLayout>
 </ScrollView>

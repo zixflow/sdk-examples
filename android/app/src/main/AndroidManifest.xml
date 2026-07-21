@@ -26,6 +26,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Demo screens opened via zixflowdemo://sale and zixflowdemo://dashboard
+             push notification deeplinks (see DeeplinkRouter). -->
+        <activity
+            android:name=".SaleActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ZixflowSdkExample" />
+        <activity
+            android:name=".DashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ZixflowSdkExample" />
+
         <receiver
             android:name=".NotificationActionReceiver"
             android:exported="false">

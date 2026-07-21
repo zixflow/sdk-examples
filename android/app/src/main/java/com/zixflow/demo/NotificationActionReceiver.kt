@@ -3,7 +3,6 @@ package com.zixflow.demo
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.zixflow.sdk.Zixflow
@@ -64,10 +63,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         }
 
         if (actionDeeplink.isNotEmpty()) {
-            val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(actionDeeplink)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(viewIntent)
+            DeeplinkRouter.open(context, actionDeeplink)
         }
     }
 

@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:zixflow/zixflow.dart';
 
 import 'config.dart';
+import 'navigation.dart';
 import 'push_handlers.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/sale_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,11 +61,16 @@ class ZixflowDemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Zixflow Flutter Demo',
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F766E)),
         useMaterial3: true,
       ),
       home: const DemoHomePage(),
+      routes: {
+        saleRoute: (_) => const SaleScreen(),
+        dashboardRoute: (_) => const DashboardScreen(),
+      },
     );
   }
 }
@@ -158,6 +166,16 @@ class _DemoHomePageState extends State<DemoHomePage> {
     _setStatus('FCM token copied to clipboard');
   }
 
+  void _openSaleScreen() {
+    navigatorKey.currentState?.pushNamed(saleRoute);
+    _setStatus('Navigated to Sale screen (manual test)');
+  }
+
+  void _openDashboardScreen() {
+    navigatorKey.currentState?.pushNamed(dashboardRoute);
+    _setStatus('Navigated to Dashboard screen (manual test)');
+  }
+
   @override
   Widget build(BuildContext context) {
     final actions = <({String label, VoidCallback onPressed})>[
@@ -169,6 +187,11 @@ class _DemoHomePageState extends State<DemoHomePage> {
       (label: 'Clear Identify', onPressed: _clearIdentify),
       (label: 'Register Device Token (demo)', onPressed: _registerDeviceToken),
       (label: 'Delete Device Token', onPressed: _deleteDeviceToken),
+      (label: 'Open Sale Screen (manual test)', onPressed: _openSaleScreen),
+      (
+        label: 'Open Dashboard Screen (manual test)',
+        onPressed: _openDashboardScreen
+      ),
     ];
 
     return Scaffold(

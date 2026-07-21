@@ -11,6 +11,7 @@ import notifee, {
 import { MetricEvent, Zixflow } from 'zixflow-reactnative';
 
 import { parseActionButtons } from './pushActions';
+import { navigate, resolveInAppRoute } from './navigation';
 
 /**
  * Pure JavaScript/TypeScript push notification handling for Android — no
@@ -149,6 +150,22 @@ function trackOpened(data: Record<string, string | undefined>) {
   }
 }
 
+/** Tracks the "delivered" metric as soon as the data payload arrives — call this
+ * from both the foreground `onMessage` listener and the background handler,
+ * before displaying the local notification. */
+function trackDelivered(data: Record<string, string | undefined>) {
+  const deliveryId = data['Zixflow-Delivery-ID'] ?? '';
+  const deliveryToken = data['Zixflow-Delivery-Token'] ?? cachedToken ?? '';
+
+  if (deliveryId && deliveryToken) {
+    Zixflow.trackMetric({
+      deliveryID: deliveryId,
+      deviceToken: deliveryToken,
+      event: MetricEvent.Delivered,
+    }).catch(() => {});
+  }
+}
+
 /** Tracks "Push Notification Action Clicked" and opens the button's deeplink. */
 function trackActionClick(
   data: Record<string, string | undefined>,
@@ -178,6 +195,13 @@ function trackActionClick(
 function handleDeeplink(deeplink?: string) {
   if (!deeplink) return;
   console.log(`[PushHandlers] Deeplink: ${deeplink}`);
+
+  const screen = resolveInAppRoute(deeplink);
+  if (screen) {
+    navigate(screen);
+    return;
+  }
+
   Linking.openURL(deeplink).catch(() => {});
 }
 
@@ -242,6 +266,7 @@ export const PushHandlers = {
     // Foreground: FCM message received while app is open.
     messaging().onMessage(async (message) => {
       logIncomingPush('FOREGROUND', message);
+      trackDelivered((message.data ?? {}) as Record<string, string>);
       await showNotification(message);
     });
 
@@ -294,6 +319,7 @@ export async function firebaseBackgroundMessageHandler(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
   logIncomingPush('BACKGROUND/TERMINATED', message);
+  trackDelivered((message.data ?? {}) as Record<string, string>);
   await showNotification(message);
 }
 

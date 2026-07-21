@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -120,6 +119,14 @@ class MainActivity : AppCompatActivity() {
             toast("clearIdentify()")
         }
 
+        findViewById<Button>(R.id.btnOpenSale).setOnClickListener {
+            startActivity(Intent(this, SaleActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btnOpenDashboard).setOnClickListener {
+            startActivity(Intent(this, DashboardActivity::class.java))
+        }
+
         startTokenPolling()
 
         handlePushOpenIntent(intent)
@@ -155,10 +162,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (!deeplink.isNullOrEmpty()) {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(deeplink)))
-            } catch (_: Exception) {
-            }
+            DeeplinkRouter.open(this, deeplink)
         }
     }
 
