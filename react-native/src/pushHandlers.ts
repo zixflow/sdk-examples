@@ -35,9 +35,37 @@ const ANDROID_CHANNEL_NAME = 'Zixflow Notifications';
 
 let cachedToken: string | undefined;
 
+type NotificationDataValue = string | number | object;
+type NotificationData = Record<string, NotificationDataValue>;
+
+function toLogString(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '[unserializable]';
+  }
+}
+
+function sanitizeNotificationData(
+  data: Record<string, unknown>,
+): NotificationData {
+  const entries = Object.entries(data).filter(([, value]) => value !== undefined);
+  return Object.fromEntries(entries) as NotificationData;
+}
+
+function getStringField(
+  data: Record<string, unknown>,
+  key: string,
+): string | undefined {
+  const value = data[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
 /** Parses the Zixflow `action_buttons` JSON field into notifee actions. */
-function buildNotifeeActions(data: Record<string, string | undefined>) {
-  const buttons = parseActionButtons(data.action_buttons);
+function buildNotifeeActions(data: Record<string, unknown>) {
+  const buttons = parseActionButtons(getStringField(data, 'action_buttons'));
   return buttons.slice(0, 2).map((button, index) => ({
     title: button.name || `Action ${index + 1}`,
     pressAction: { id: `action_${index}` },
@@ -49,9 +77,9 @@ function logIncomingPush(
   state: string,
   message: FirebaseMessagingTypes.RemoteMessage,
 ) {
-  const title =
+  const titleRaw =
     message.notification?.title ?? message.data?.title ?? '(no title)';
-  const body =
+  const bodyRaw =
     message.notification?.body ?? message.data?.body ?? '(no body)';
 
   console.log('');
@@ -62,8 +90,8 @@ function logIncomingPush(
   console.log(`   ttl          : ${message.ttl}`);
   console.log(`   from         : ${message.from}`);
   console.log(`   collapseKey  : ${message.collapseKey}`);
-  console.log(`   title        : ${title}`);
-  console.log(`   body         : ${body}`);
+  console.log(`   title        : ${toLogString(titleRaw)}`);
+  console.log(`   body         : ${toLogString(bodyRaw)}`);
   console.log('   data (full payload):');
   console.log(JSON.stringify(message.data ?? {}, null, 2));
   console.log('════════════════════════════════════════');
@@ -79,22 +107,32 @@ function isValidImageUrl(value?: string): value is string {
 async function showNotification(
   message: FirebaseMessagingTypes.RemoteMessage,
 ) {
-  const data = (message.data ?? {}) as Record<string, string | undefined>;
+  const data: NotificationData = sanitizeNotificationData(
+    (message.data ?? {}) as Record<string, unknown>,
+  );
+  const titleFromData = getStringField(data, 'title');
+  const bodyFromData = getStringField(data, 'body');
+  const soundFromData = getStringField(data, 'sound');
+  const badgeFromData = getStringField(data, 'badge');
+  const stickyFromData = getStringField(data, 'sticky');
+  const largeIconUrl = getStringField(data, 'large_icon_url');
+  const imageUrl = getStringField(data, 'image_url');
   const title =
-    message.notification?.title ?? data.title ?? 'Notification';
-  const body = message.notification?.body ?? data.body ?? '';
+    message.notification?.title ?? titleFromData ?? 'Notification';
+  const body = message.notification?.body ?? bodyFromData ?? '';
 
   const soundName =
-    data.sound && data.sound !== 'default' && data.sound !== 'none'
-      ? data.sound
+    soundFromData && soundFromData !== 'default' && soundFromData !== 'none'
+      ? soundFromData
       : undefined;
-  const badgeCount = data.badge != null ? parseInt(data.badge, 10) : undefined;
+  const badgeCount =
+    badgeFromData != null ? Number.parseInt(badgeFromData, 10) : undefined;
   // "sticky": true means the notification survives swipe-dismiss and "Clear all", but
   // STILL gets removed when tapped or when an action button is pressed — sticky only
   // blocks passive dismissal, not active interaction. `autoCancel` is therefore always
   // true below; `ongoing` is what's actually driven by `sticky`. Android only — no iOS
   // equivalent.
-  const sticky = data.sticky === 'true';
+  const sticky = stickyFromData === 'true';
 
   if (badgeCount != null && !Number.isNaN(badgeCount)) {
     notifee.setBadgeCount(badgeCount).catch(() => {});
@@ -116,11 +154,11 @@ async function showNotification(
       importance: AndroidImportance.HIGH,
       pressAction: { id: 'default' },
       actions: buildNotifeeActions(data),
-      ...(isValidImageUrl(data.large_icon_url)
-        ? { largeIcon: data.large_icon_url }
+      ...(isValidImageUrl(largeIconUrl)
+        ? { largeIcon: largeIconUrl }
         : {}),
-      ...(isValidImageUrl(data.image_url)
-        ? { style: { type: AndroidStyle.BIGPICTURE, picture: data.image_url } }
+      ...(isValidImageUrl(imageUrl)
+        ? { style: { type: AndroidStyle.BIGPICTURE, picture: imageUrl } }
         : {}),
       ...(soundName ? { sound: soundName } : {}),
       autoCancel: true,
@@ -136,10 +174,10 @@ async function showNotification(
 
 
 /** Tracks the "opened" metric for a delivered push using its delivery IDs. */
-function trackOpened(data: Record<string, string | undefined>) {
-  const deliveryId = data['Zixflow-Delivery-ID'] ?? '';
+function trackOpened(data: Record<string, unknown>) {
+  const deliveryId = getStringField(data, 'Zixflow-Delivery-ID') ?? '';
   const deliveryToken =
-    data['Zixflow-Delivery-Token'] ?? cachedToken ?? '';
+    getStringField(data, 'Zixflow-Delivery-Token') ?? cachedToken ?? '';
 
   if (deliveryId && deliveryToken) {
     Zixflow.trackMetric({
@@ -153,9 +191,9 @@ function trackOpened(data: Record<string, string | undefined>) {
 /** Tracks the "delivered" metric as soon as the data payload arrives — call this
  * from both the foreground `onMessage` listener and the background handler,
  * before displaying the local notification. */
-function trackDelivered(data: Record<string, string | undefined>) {
-  const deliveryId = data['Zixflow-Delivery-ID'] ?? '';
-  const deliveryToken = data['Zixflow-Delivery-Token'] ?? cachedToken ?? '';
+function trackDelivered(data: Record<string, unknown>) {
+  const deliveryId = getStringField(data, 'Zixflow-Delivery-ID') ?? '';
+  const deliveryToken = getStringField(data, 'Zixflow-Delivery-Token') ?? cachedToken ?? '';
 
   if (deliveryId && deliveryToken) {
     Zixflow.trackMetric({
@@ -168,20 +206,20 @@ function trackDelivered(data: Record<string, string | undefined>) {
 
 /** Tracks "Push Notification Action Clicked" and opens the button's deeplink. */
 function trackActionClick(
-  data: Record<string, string | undefined>,
+  data: Record<string, unknown>,
   actionId: string,
 ) {
-  const actionIndex = parseInt(actionId.replace(/\D/g, ''), 10) || 0;
-  const buttons = parseActionButtons(data.action_buttons);
+  const actionIndex = Number.parseInt(actionId.replace(/\D/g, ''), 10) || 0;
+  const buttons = parseActionButtons(getStringField(data, 'action_buttons'));
   const button = buttons[actionIndex];
   const actionName = button?.name || `Action ${actionIndex + 1}`;
   const actionDeeplink = button?.deeplink ?? '';
 
   Zixflow.track('Push Notification Action Clicked', {
-    'Zixflow-Delivery-ID': data['Zixflow-Delivery-ID'] ?? '',
-    'Zixflow-Delivery-Token': data['Zixflow-Delivery-Token'] ?? '',
-    notification_id: data['Zixflow-Delivery-ID'] ?? '',
-    title: data.title ?? '',
+    'Zixflow-Delivery-ID': getStringField(data, 'Zixflow-Delivery-ID') ?? '',
+    'Zixflow-Delivery-Token': getStringField(data, 'Zixflow-Delivery-Token') ?? '',
+    notification_id: getStringField(data, 'Zixflow-Delivery-ID') ?? '',
+    title: getStringField(data, 'title') ?? '',
     action_id: actionId,
     action_index: actionIndex,
     action_name: actionName,
@@ -189,7 +227,7 @@ function trackActionClick(
     source: 'local_notification',
   }).catch(() => {});
 
-  handleDeeplink(actionDeeplink || data.deeplink_url);
+  handleDeeplink(actionDeeplink || getStringField(data, 'deeplink_url'));
 }
 
 function handleDeeplink(deeplink?: string) {
@@ -207,10 +245,7 @@ function handleDeeplink(deeplink?: string) {
 
 /** Handles a notifee event (foreground or background) for a tap or action press. */
 function handleNotifeeEvent(type: EventType, detail: { notification?: Notification; pressAction?: { id: string } }) {
-  const data = (detail.notification?.data ?? {}) as Record<
-    string,
-    string | undefined
-  >;
+  const data = (detail.notification?.data ?? {}) as Record<string, unknown>;
 
   if (type === EventType.PRESS) {
     trackOpened(data);
@@ -246,10 +281,7 @@ export const PushHandlers = {
 
     if (Platform.OS === 'ios') {
       // iOS requires explicit APNs registration + permission via
-      // @react-native-firebase/messaging before `getToken()` will resolve —
-      // notifee's permission request alone does not register the device for
-      // remote messages.
-      await messaging().requestPermission();
+      // `registerDeviceForRemoteMessages()` before `getToken()` will resolve.
       if (!messaging().isDeviceRegisteredForRemoteMessages) {
         await messaging().registerDeviceForRemoteMessages();
       }
@@ -266,14 +298,14 @@ export const PushHandlers = {
     // Foreground: FCM message received while app is open.
     messaging().onMessage(async (message) => {
       logIncomingPush('FOREGROUND', message);
-      trackDelivered((message.data ?? {}) as Record<string, string>);
+      trackDelivered((message.data ?? {}) as Record<string, unknown>);
       await showNotification(message);
     });
 
     // Notification tap that brought the app from background to foreground.
     messaging().onNotificationOpenedApp((message) => {
       logIncomingPush('OPENED (tapped from background)', message);
-      trackOpened((message.data ?? {}) as Record<string, string>);
+      trackOpened((message.data ?? {}) as Record<string, unknown>);
       handleDeeplink(message.data?.deeplink_url as string | undefined);
     });
 
@@ -281,7 +313,7 @@ export const PushHandlers = {
     const initialMessage = await messaging().getInitialNotification();
     if (initialMessage) {
       logIncomingPush('OPENED (launched from terminated)', initialMessage);
-      trackOpened((initialMessage.data ?? {}) as Record<string, string>);
+      trackOpened((initialMessage.data ?? {}) as Record<string, unknown>);
       handleDeeplink(initialMessage.data?.deeplink_url as string | undefined);
     }
 
@@ -319,7 +351,7 @@ export async function firebaseBackgroundMessageHandler(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
   logIncomingPush('BACKGROUND/TERMINATED', message);
-  trackDelivered((message.data ?? {}) as Record<string, string>);
+  trackDelivered((message.data ?? {}) as Record<string, unknown>);
   await showNotification(message);
 }
 
