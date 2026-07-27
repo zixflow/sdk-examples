@@ -104,6 +104,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
 
         if (deliveryId.isNotEmpty() && deliveryToken.isNotEmpty()) {
             try {
+                PushTrackLogger.logOutgoingTrack(
+                    "DELIVERED",
+                    "CustomFirebaseMessagingService.handlePushManually",
+                    mapOf(
+                        "Zixflow-Delivery-ID" to deliveryId,
+                        "Zixflow-Delivery-Token" to deliveryToken,
+                        "metric" to Metric.Delivered
+                    )
+                )
                 Zixflow.instance().trackMetric(
                     TrackMetric.Push(
                         metric = Metric.Delivered,
@@ -115,6 +124,12 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to track delivered metric", e)
             }
+        } else {
+            PushTrackLogger.logSkipped(
+                "DELIVERED",
+                "CustomFirebaseMessagingService.handlePushManually",
+                "missing Zixflow-Delivery-ID/Token in payload"
+            )
         }
 
         showNotification(title, body, data, deliveryId, deliveryToken)

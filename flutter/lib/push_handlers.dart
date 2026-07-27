@@ -35,7 +35,7 @@ const String _androidChannelName = 'Zixflow Notifications';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   _logIncomingPush('BACKGROUND/TERMINATED', message);
-  _trackDelivered(message.data);
+  _trackDelivered(message.data, 'firebaseMessagingBackgroundHandler');
 
   // Fresh plugin instance for this isolate — method-channel calls are
   // stateless, so there's no need to share the foreground singleton.
@@ -184,20 +184,22 @@ class PushHandlers {
     // Foreground: show the local notification ourselves (with buttons).
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logIncomingPush('FOREGROUND', message);
-      _trackDelivered(message.data);
+      _trackDelivered(message.data, 'onMessage (foreground)');
       _showLocalNotification(_localNotifications, message);
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       _logIncomingPush('OPENED (tapped from background)', message);
-      _trackOpened(message.data);
+      debugPrint('[PushHandlers] Notification BODY tapped (app resumed from background)');
+      _trackOpened(message.data, 'onMessageOpenedApp (body tap)');
       _handleDeeplink(message.data['deeplink_url']?.toString());
     });
 
     FirebaseMessaging.instance.getInitialMessage().then((message) {
       if (message != null) {
         _logIncomingPush('OPENED (launched from terminated)', message);
-        _trackOpened(message.data);
+        debugPrint('[PushHandlers] Notification BODY tapped (app launched from terminated)');
+        _trackOpened(message.data, 'getInitialMessage (body tap)');
         _handleDeeplink(message.data['deeplink_url']?.toString());
       }
     });
@@ -217,7 +219,9 @@ void _handleNotificationResponse(NotificationResponse response) {
     return;
   }
 
-  _trackOpened(payload);
+  // Body tap always tracks "Opened", regardless of whether an action button was also tapped.
+  debugPrint('[PushHandlers] Notification BODY/local-notification tapped (foreground/background isolate)');
+  _trackOpened(payload, 'flutter_local_notifications response (body or action tap)');
 
   if (response.actionId != null && response.actionId!.isNotEmpty) {
     _trackActionClick(payload, response.actionId!);
@@ -245,15 +249,24 @@ void _handleNotificationResponse(NotificationResponse response) {
   }
 }
 
-void _trackOpened(Map<String, dynamic> data) {
+void _trackOpened(Map<String, dynamic> data, String source) {
   final deliveryId = data['Zixflow-Delivery-ID']?.toString() ?? '';
   final deliveryToken = data['Zixflow-Delivery-Token']?.toString() ?? '';
 
   if (deliveryId.isNotEmpty && deliveryToken.isNotEmpty) {
+    _logOutgoingTrack('OPENED', source, {
+      'Zixflow-Delivery-ID': deliveryId,
+      'Zixflow-Delivery-Token': deliveryToken,
+      'event': 'opened',
+    });
     Zixflow.instance.trackMetric(
       deliveryID: deliveryId,
       deviceToken: deliveryToken,
       event: MetricEvent.opened,
+    );
+  } else {
+    debugPrint(
+      '[PushHandlers] Skipped OPENED tracking ($source): missing Zixflow-Delivery-ID/Token in payload',
     );
   }
 }
@@ -262,15 +275,24 @@ void _trackOpened(Map<String, dynamic> data) {
 /// payload arrives — call this from both the foreground `onMessage` listener
 /// and the background/terminated FCM handler, before displaying the local
 /// notification.
-void _trackDelivered(Map<String, dynamic> data) {
+void _trackDelivered(Map<String, dynamic> data, String source) {
   final deliveryId = data['Zixflow-Delivery-ID']?.toString() ?? '';
   final deliveryToken = data['Zixflow-Delivery-Token']?.toString() ?? '';
 
   if (deliveryId.isNotEmpty && deliveryToken.isNotEmpty) {
+    _logOutgoingTrack('DELIVERED', source, {
+      'Zixflow-Delivery-ID': deliveryId,
+      'Zixflow-Delivery-Token': deliveryToken,
+      'event': 'delivered',
+    });
     Zixflow.instance.trackMetric(
       deliveryID: deliveryId,
       deviceToken: deliveryToken,
       event: MetricEvent.delivered,
+    );
+  } else {
+    debugPrint(
+      '[PushHandlers] Skipped DELIVERED tracking ($source): missing Zixflow-Delivery-ID/Token in payload',
     );
   }
 }
@@ -286,19 +308,24 @@ void _trackActionClick(Map<String, dynamic> payload, String actionId) {
       ? buttons[actionIndex]['deeplink']?.toString() ?? ''
       : '';
 
+  final properties = {
+    'Zixflow-Delivery-ID': payload['Zixflow-Delivery-ID'] ?? '',
+    'Zixflow-Delivery-Token': payload['Zixflow-Delivery-Token'] ?? '',
+    'notification_id': payload['Zixflow-Delivery-ID'] ?? '',
+    'title': payload['title'] ?? '',
+    'action_id': actionId,
+    'action_index': actionIndex,
+    'action_name': actionName,
+    'action_deeplink': actionDeeplink,
+    'source': 'local_notification',
+  };
+  _logOutgoingTrack('CLICKED (action button)', 'flutter_local_notifications ACTION', {
+    'event': 'Push Notification Action Clicked',
+    'properties': properties,
+  });
   Zixflow.instance.track(
     name: 'Push Notification Action Clicked',
-    properties: {
-      'Zixflow-Delivery-ID': payload['Zixflow-Delivery-ID'] ?? '',
-      'Zixflow-Delivery-Token': payload['Zixflow-Delivery-Token'] ?? '',
-      'notification_id': payload['Zixflow-Delivery-ID'] ?? '',
-      'title': payload['title'] ?? '',
-      'action_id': actionId,
-      'action_index': actionIndex,
-      'action_name': actionName,
-      'action_deeplink': actionDeeplink,
-      'source': 'local_notification',
-    },
+    properties: properties,
   );
 }
 
@@ -448,10 +475,22 @@ void _handleDeeplink(String? deeplink) {
   });
 }
 
+/// Logs the exact outgoing payload being sent to the Zixflow SDK for a
+/// Delivered/Opened/Clicked tracking call — use this to verify what's
+/// actually being POSTed for each notification lifecycle event during testing.
+void _logOutgoingTrack(String kind, String source, Map<String, dynamic> payload) {
+  const encoder = JsonEncoder.withIndent('  ');
+  debugPrint('');
+  debugPrint('----------------------------------------');
+  debugPrint('📤 OUTGOING TRACK [$kind] via $source');
+  debugPrint(encoder.convert(payload));
+  debugPrint('----------------------------------------');
+  debugPrint('');
+}
+
 /// Logs the full incoming push payload (all RemoteMessage fields + data map)
 /// for any app state — foreground, background, or opened.
-void _logIncomingPush(String state, RemoteMessage message) {
-  const encoder = JsonEncoder.withIndent('  ');
+void _logIncomingPush(String state, RemoteMessage message) {  const encoder = JsonEncoder.withIndent('  ');
   final title = message.notification?.title ?? message.data['title'] ?? '(no title)';
   final body = message.notification?.body ?? message.data['body'] ?? '(no body)';
 

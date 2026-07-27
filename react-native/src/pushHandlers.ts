@@ -103,6 +103,20 @@ function isValidImageUrl(value?: string): value is string {
   return Boolean(value) && /^https?:\/\//i.test(value as string);
 }
 
+/**
+ * Logs the exact outgoing payload being sent to the Zixflow SDK for a
+ * Delivered/Opened/Clicked tracking call — use this to verify what's actually
+ * being POSTed for each notification lifecycle event during testing.
+ */
+function logOutgoingTrack(kind: string, source: string, payload: unknown) {
+  console.log('');
+  console.log('----------------------------------------');
+  console.log(`\u{1F4E4} OUTGOING TRACK [${kind}] via ${source}`);
+  console.log(JSON.stringify(payload, null, 2));
+  console.log('----------------------------------------');
+  console.log('');
+}
+
 /** Displays a local notification (with dynamic action buttons) via notifee. */
 async function showNotification(
   message: FirebaseMessagingTypes.RemoteMessage,
@@ -174,34 +188,59 @@ async function showNotification(
 
 
 /** Tracks the "opened" metric for a delivered push using its delivery IDs. */
-function trackOpened(data: Record<string, unknown>) {
+function trackOpened(data: Record<string, unknown>, source: string) {
   const deliveryId = getStringField(data, 'Zixflow-Delivery-ID') ?? '';
   const deliveryToken =
     getStringField(data, 'Zixflow-Delivery-Token') ?? cachedToken ?? '';
 
   if (deliveryId && deliveryToken) {
-    Zixflow.trackMetric({
+    const payload = {
       deliveryID: deliveryId,
       deviceToken: deliveryToken,
       event: MetricEvent.Opened,
-    }).catch(() => {});
+    };
+    logOutgoingTrack('OPENED', source, {
+      'Zixflow-Delivery-ID': deliveryId,
+      'Zixflow-Delivery-Token': deliveryToken,
+      event: MetricEvent.Opened,
+    });
+    Zixflow.trackMetric(payload).catch((error) => {
+      console.log(`[PushHandlers] trackMetric(Opened) failed: ${error}`);
+    });
+  } else {
+    console.log(
+      `[PushHandlers] Skipped OPENED tracking (${source}): missing Zixflow-Delivery-ID/Token in payload`,
+    );
   }
 }
 
 /** Tracks the "delivered" metric as soon as the data payload arrives — call this
  * from both the foreground `onMessage` listener and the background handler,
  * before displaying the local notification. */
-function trackDelivered(data: Record<string, unknown>) {
+function trackDelivered(data: Record<string, unknown>, source: string) {
   const deliveryId = getStringField(data, 'Zixflow-Delivery-ID') ?? '';
   const deliveryToken = getStringField(data, 'Zixflow-Delivery-Token') ?? cachedToken ?? '';
 
-  if (deliveryId && deliveryToken) {
-    Zixflow.trackMetric({
-      deliveryID: deliveryId,
-      deviceToken: deliveryToken,
-      event: MetricEvent.Delivered,
-    }).catch(() => {});
+  if (!deliveryId || !deliveryToken) {
+    console.log(
+      `[PushHandlers] Skipped DELIVERED tracking (${source}): missing Zixflow-Delivery-ID/Token in payload`,
+    );
+    return;
   }
+
+  const payload = {
+    deliveryID: deliveryId,
+    deviceToken: deliveryToken,
+    event: MetricEvent.Delivered,
+  };
+  logOutgoingTrack('DELIVERED', source, {
+    'Zixflow-Delivery-ID': deliveryId,
+    'Zixflow-Delivery-Token': deliveryToken,
+    event: MetricEvent.Delivered,
+  });
+  Zixflow.trackMetric(payload).catch((error) => {
+    console.log(`[PushHandlers] trackMetric(Delivered) failed: ${error}`);
+  });
 }
 
 /** Tracks "Push Notification Action Clicked" and opens the button's deeplink. */
@@ -215,7 +254,7 @@ function trackActionClick(
   const actionName = button?.name || `Action ${actionIndex + 1}`;
   const actionDeeplink = button?.deeplink ?? '';
 
-  Zixflow.track('Push Notification Action Clicked', {
+  const properties = {
     'Zixflow-Delivery-ID': getStringField(data, 'Zixflow-Delivery-ID') ?? '',
     'Zixflow-Delivery-Token': getStringField(data, 'Zixflow-Delivery-Token') ?? '',
     notification_id: getStringField(data, 'Zixflow-Delivery-ID') ?? '',
@@ -225,7 +264,14 @@ function trackActionClick(
     action_name: actionName,
     action_deeplink: actionDeeplink,
     source: 'local_notification',
-  }).catch(() => {});
+  };
+  logOutgoingTrack('CLICKED (action button)', 'notifee ACTION_PRESS', {
+    event: 'Push Notification Action Clicked',
+    properties,
+  });
+  Zixflow.track('Push Notification Action Clicked', properties).catch((error) => {
+    console.log(`[PushHandlers] track(Action Clicked) failed: ${error}`);
+  });
 
   handleDeeplink(actionDeeplink || getStringField(data, 'deeplink_url'));
 }
@@ -248,10 +294,12 @@ function handleNotifeeEvent(type: EventType, detail: { notification?: Notificati
   const data = (detail.notification?.data ?? {}) as Record<string, unknown>;
 
   if (type === EventType.PRESS) {
-    trackOpened(data);
-    handleDeeplink(data.deeplink_url);
+    // Notification BODY tap (not an action button) — must always track "Opened".
+    console.log('[PushHandlers] Notification BODY tapped (notifee PRESS)');
+    trackOpened(data, 'notifee PRESS (body tap)');
+    handleDeeplink(getStringField(data, 'deeplink_url'));
   } else if (type === EventType.ACTION_PRESS && detail.pressAction) {
-    trackOpened(data);
+    trackOpened(data, 'notifee ACTION_PRESS');
     trackActionClick(data, detail.pressAction.id);
     // Action buttons on Android are routed through notifee's background handler, so
     // `autoCancel` does NOT dismiss the notification for action presses (only for the
@@ -298,14 +346,15 @@ export const PushHandlers = {
     // Foreground: FCM message received while app is open.
     messaging().onMessage(async (message) => {
       logIncomingPush('FOREGROUND', message);
-      trackDelivered((message.data ?? {}) as Record<string, unknown>);
+      trackDelivered((message.data ?? {}) as Record<string, unknown>, 'onMessage (foreground)');
       await showNotification(message);
     });
 
     // Notification tap that brought the app from background to foreground.
     messaging().onNotificationOpenedApp((message) => {
       logIncomingPush('OPENED (tapped from background)', message);
-      trackOpened((message.data ?? {}) as Record<string, unknown>);
+      console.log('[PushHandlers] Notification BODY tapped (app resumed from background)');
+      trackOpened((message.data ?? {}) as Record<string, unknown>, 'onNotificationOpenedApp (body tap)');
       handleDeeplink(message.data?.deeplink_url as string | undefined);
     });
 
@@ -313,7 +362,8 @@ export const PushHandlers = {
     const initialMessage = await messaging().getInitialNotification();
     if (initialMessage) {
       logIncomingPush('OPENED (launched from terminated)', initialMessage);
-      trackOpened((initialMessage.data ?? {}) as Record<string, unknown>);
+      console.log('[PushHandlers] Notification BODY tapped (app launched from terminated)');
+      trackOpened((initialMessage.data ?? {}) as Record<string, unknown>, 'getInitialNotification (body tap)');
       handleDeeplink(initialMessage.data?.deeplink_url as string | undefined);
     }
 
@@ -351,7 +401,7 @@ export async function firebaseBackgroundMessageHandler(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
   logIncomingPush('BACKGROUND/TERMINATED', message);
-  trackDelivered((message.data ?? {}) as Record<string, unknown>);
+  trackDelivered((message.data ?? {}) as Record<string, unknown>, 'firebaseBackgroundMessageHandler');
   await showNotification(message);
 }
 

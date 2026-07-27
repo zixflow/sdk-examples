@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
@@ -149,6 +150,16 @@ class MainActivity : AppCompatActivity() {
         val deeplink = intent.getStringExtra(CustomFirebaseMessagingService.EXTRA_DEEPLINK)
 
         if (!deliveryId.isNullOrEmpty() && !deliveryToken.isNullOrEmpty()) {
+            Log.i("MainActivity", "Notification BODY tapped (launched/resumed MainActivity)")
+            PushTrackLogger.logOutgoingTrack(
+                "OPENED",
+                "MainActivity.handlePushOpenIntent (body tap)",
+                mapOf(
+                    "Zixflow-Delivery-ID" to deliveryId,
+                    "Zixflow-Delivery-Token" to deliveryToken,
+                    "metric" to Metric.Opened
+                )
+            )
             try {
                 Zixflow.instance().trackMetric(
                     TrackMetric.Push(
@@ -159,6 +170,12 @@ class MainActivity : AppCompatActivity() {
                 )
             } catch (_: Exception) {
             }
+        } else {
+            PushTrackLogger.logSkipped(
+                "OPENED",
+                "MainActivity.handlePushOpenIntent (body tap)",
+                "missing Zixflow-Delivery-ID/Token in intent extras"
+            )
         }
 
         if (!deeplink.isNullOrEmpty()) {

@@ -78,11 +78,22 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // foreground. autoTrackPushEvents(true) should also track this internally, but being
         // explicit here keeps behavior verifiable/consistent across all 4 platforms.
         if !deliveryId.isEmpty && !deliveryToken.isEmpty {
+            logOutgoingTrack(
+                kind: "DELIVERED",
+                source: "userNotificationCenter(willPresent:) (foreground)",
+                payload: [
+                    "Zixflow-Delivery-ID": deliveryId,
+                    "Zixflow-Delivery-Token": deliveryToken,
+                    "event": "delivered",
+                ]
+            )
             MessagingPush.shared.trackMetric(
                 deliveryID: deliveryId,
                 event: .delivered,
                 deviceToken: deliveryToken
             )
+        } else {
+            print("[PushHandlers] Skipped DELIVERED tracking: missing Zixflow-Delivery-ID/Token in payload")
         }
 
         completionHandler([.banner, .sound, .badge, .list])
@@ -99,10 +110,37 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         guard actionId == "ACTION_0" || actionId == "ACTION_1" else {
             // Default tap (notification body) or dismiss action.
             if actionId == UNNotificationDefaultActionIdentifier {
-                // Body taps are auto-tracked as "Opened" by the SDK when autoTrackPushEvents(true)
-                // — no explicit trackMetric call needed here. Deeplink routing, however, is not
-                // handled by the SDK at all, so route the top-level `deeplink_url` field
-                // ourselves: in-app for zixflowdemo://sale|dashboard, external otherwise.
+                // NOTE: this used to rely solely on the SDK's autoTrackPushEvents(true) to
+                // auto-track "Opened" for body taps. That auto-tracking is implemented via
+                // swizzling `UNUserNotificationCenter.current().delegate` (see
+                // AutomaticPushClickHandling.swift) and is NOT guaranteed to fire once this
+                // AppDelegate sets itself as the delegate (`UNUserNotificationCenter.current().delegate
+                // = self` in didFinishLaunching) — that mechanism is also marked deprecated in the
+                // SDK. Track explicitly here instead, exactly like the action-button branch below,
+                // so body-tap click tracking doesn't silently depend on undocumented SDK internals.
+                let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
+                let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
+
+                print("[PushHandlers] Notification BODY tapped")
+                if !deliveryId.isEmpty && !deliveryToken.isEmpty {
+                    logOutgoingTrack(
+                        kind: "OPENED",
+                        source: "userNotificationCenter(didReceive:) body tap",
+                        payload: [
+                            "Zixflow-Delivery-ID": deliveryId,
+                            "Zixflow-Delivery-Token": deliveryToken,
+                            "event": "opened",
+                        ]
+                    )
+                    MessagingPush.shared.trackMetric(
+                        deliveryID: deliveryId,
+                        event: .opened,
+                        deviceToken: deliveryToken
+                    )
+                } else {
+                    print("[PushHandlers] Skipped OPENED tracking (body tap): missing Zixflow-Delivery-ID/Token in payload")
+                }
+
                 let deeplink = userInfo["deeplink_url"] as? String ?? ""
                 if !NavigationRouter.shared.open(deeplink: deeplink),
                    !deeplink.isEmpty, let url = URL(string: deeplink) {
@@ -116,14 +154,25 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
         let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
 
-        // Body taps are auto-tracked when autoTrackPushEvents(true). Action-button taps are not
-        // (SDK only treats UNNotificationDefaultActionIdentifier as an open).
+        // Action-button taps: explicit "Opened" tracking, same reasoning as the body-tap
+        // branch above — do not rely on autoTrackPushEvents for this either.
         if !deliveryId.isEmpty && !deliveryToken.isEmpty {
+            logOutgoingTrack(
+                kind: "OPENED",
+                source: "userNotificationCenter(didReceive:) action button (\(actionId))",
+                payload: [
+                    "Zixflow-Delivery-ID": deliveryId,
+                    "Zixflow-Delivery-Token": deliveryToken,
+                    "event": "opened",
+                ]
+            )
             MessagingPush.shared.trackMetric(
                 deliveryID: deliveryId,
                 event: .opened,
                 deviceToken: deliveryToken
             )
+        } else {
+            print("[PushHandlers] Skipped OPENED tracking (action button): missing Zixflow-Delivery-ID/Token in payload")
         }
 
         let actionIndex = Int(actionId.replacingOccurrences(of: "ACTION_", with: "")) ?? -1
@@ -138,15 +187,21 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             deeplink = ""
         }
 
+        let clickProperties: [String: Any] = [
+            "Zixflow-Delivery-ID": deliveryId,
+            "Zixflow-Delivery-Token": deliveryToken,
+            "action_index": actionIndex,
+            "action_name": actionName,
+            "action_deeplink": deeplink,
+        ]
+        logOutgoingTrack(
+            kind: "CLICKED (action button)",
+            source: "userNotificationCenter(didReceive:) action button (\(actionId))",
+            payload: ["event": "Push Notification Action Clicked", "properties": clickProperties]
+        )
         Zixflow.shared.track(
             name: "Push Notification Action Clicked",
-            properties: [
-                "Zixflow-Delivery-ID": deliveryId,
-                "Zixflow-Delivery-Token": deliveryToken,
-                "action_index": actionIndex,
-                "action_name": actionName,
-                "action_deeplink": deeplink,
-            ]
+            properties: clickProperties
         )
 
         // Route in-app for zixflowdemo://sale|dashboard, external otherwise — same as the
@@ -166,6 +221,18 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             }
         }
         return ""
+    }
+
+    /// Logs the exact outgoing payload being sent to the Zixflow SDK for a
+    /// Delivered/Opened/Clicked tracking call — use this to verify what's actually
+    /// being sent for each notification lifecycle event during testing.
+    private func logOutgoingTrack(kind: String, source: String, payload: [String: Any]) {
+        print("")
+        print("----------------------------------------")
+        print("\u{1F4E4} OUTGOING TRACK [\(kind)] via \(source)")
+        print(payload)
+        print("----------------------------------------")
+        print("")
     }
 
     private func parseActionButtons(_ raw: Any?) -> [[String: Any]] {
