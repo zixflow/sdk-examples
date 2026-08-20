@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Zixflow,
   ZixflowPushPermissionStatus,
@@ -33,6 +34,13 @@ import { PushHandlers } from './src/pushHandlers';
 
 const DEMO_USER_ID = 'user-123';
 const DEMO_TOKEN_PLACEHOLDER = 'paste-fcm-or-apns-token-here';
+
+// App-level guard: only call registerDeviceToken() when the token has
+// actually changed since the last time we registered it — persisted via
+// AsyncStorage (not just an in-memory variable) so the check survives the
+// app process being killed while backgrounded, then relaunched.
+const LAST_REGISTERED_DEVICE_TOKEN_KEY =
+  'zixflow_demo_last_registered_device_token';
 
 // Exported helpers used when action-button payloads reach JS (iOS / local notifs).
 export { parseActionButtons, trackActionClick };
@@ -212,7 +220,19 @@ export default function App() {
           'No token available. Request permission first (and ensure google-services.json is installed), or paste a token.',
         );
       }
+
+      const lastToken = await AsyncStorage.getItem(
+        LAST_REGISTERED_DEVICE_TOKEN_KEY,
+      );
+      if (lastToken === token) {
+        appendLog(
+          'Device token unchanged since last registration, skipping duplicate registerDeviceToken call',
+        );
+        return;
+      }
+
       await Zixflow.registerDeviceToken(token);
+      await AsyncStorage.setItem(LAST_REGISTERED_DEVICE_TOKEN_KEY, token);
       appendLog(`Registered token with SDK: ${truncate(token)}`);
     });
 

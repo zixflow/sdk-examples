@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zixflow/zixflow.dart';
 
@@ -66,7 +67,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 @pragma('vm:entry-point')
 Future<void> _notificationTapBackground(NotificationResponse response) async {
   await Zixflow.initialize(
-    config: ZixflowConfig(apiKey: AppConfig.zixflowApiKey),
+    config: ZixflowConfig(
+      apiKey: AppConfig.zixflowApiKey,
+      apiHost: AppConfig.zixflowApiHost,
+    ),
   );
   _handleNotificationResponse(response);
 }
@@ -85,6 +89,16 @@ class PushHandlers {
   static final ValueNotifier<String?> fcmToken = ValueNotifier<String?>(null);
 
   static const String _iosCategoryId = 'ZX_2BTN';
+
+  // Persisted key for the last token we actually called registerDeviceToken()
+  // with. App-level guard: registerDeviceToken() is commonly called on every
+  // app launch (as below, right after fetching the current FCM token), which
+  // would otherwise re-send a "Device Created or Updated" event every single
+  // time even when the token hasn't changed. Persisted via SharedPreferences
+  // (not just an in-memory field) so the check survives the app process being
+  // killed while backgrounded, then relaunched.
+  static const String _lastRegisteredTokenPrefKey =
+      'zixflow_demo_last_registered_device_token';
 
   /// Call after [Firebase.initializeApp] and [Zixflow.initialize].
   static Future<void> initialize() async {
@@ -159,16 +173,31 @@ class PushHandlers {
     _fcmToken = await FirebaseMessaging.instance.getToken();
     if (_fcmToken != null) {
       fcmToken.value = _fcmToken;
-      Zixflow.instance.registerDeviceToken(deviceToken: _fcmToken!);
-      _printToken('FCM token registered', _fcmToken!);
+      await _registerDeviceTokenIfChanged(_fcmToken!);
     }
 
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
       _fcmToken = newToken;
       fcmToken.value = newToken;
-      Zixflow.instance.registerDeviceToken(deviceToken: newToken);
-      _printToken('FCM token refreshed', newToken);
+      await _registerDeviceTokenIfChanged(newToken);
     });
+  }
+
+  /// Only calls `registerDeviceToken()` when [token] differs from the last
+  /// one we actually registered — see [_lastRegisteredTokenPrefKey].
+  static Future<void> _registerDeviceTokenIfChanged(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastToken = prefs.getString(_lastRegisteredTokenPrefKey);
+    if (lastToken == token) {
+      debugPrint(
+        '[PushHandlers] Device token unchanged since last registration, skipping duplicate registerDeviceToken call',
+      );
+      return;
+    }
+
+    Zixflow.instance.registerDeviceToken(deviceToken: token);
+    await prefs.setString(_lastRegisteredTokenPrefKey, token);
+    _printToken(lastToken == null ? 'FCM token registered' : 'FCM token refreshed', token);
   }
 
   static void _printToken(String label, String token) {

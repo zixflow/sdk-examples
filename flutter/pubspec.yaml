@@ -20,6 +20,10 @@ dependencies:
   http: ^1.2.0
   path_provider: ^2.1.0
 
+  # Persists the last-registered device token so registerDeviceToken() isn't
+  # called again with an unchanged token on every app launch.
+  shared_preferences: ^2.2.2
+
   # Opens the `deeplink_url` / action button deeplink when a notification
   # (or action button) is tapped.
   url_launcher: ^6.3.1

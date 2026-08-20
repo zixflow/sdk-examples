@@ -2,10 +2,12 @@ platform :ios, '13.0'
 use_frameworks!
 
 target 'ZixflowSdkExample' do
-  # Core (required)
-  pod 'ZixflowDataPipelines', '~> 1.1'
+  # Using the local zixflow-ios checkout (device-token idempotency fix from
+  # 2026-08-20, not yet released) instead of the published '~> 1.1' pods.
+  # Switch back to the published version once the fix ships in a real release.
+  pod 'ZixflowDataPipelines', :path => '../../zixflow-ios'
 
   # Optional modules
-  pod 'ZixflowMessagingPushAPN', '~> 1.1'
-  pod 'ZixflowLocation', '~> 1.1'
+  pod 'ZixflowMessagingPushAPN', :path => '../../zixflow-ios'
+  pod 'ZixflowLocation', :path => '../../zixflow-ios'
 end

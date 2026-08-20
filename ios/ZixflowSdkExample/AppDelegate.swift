@@ -35,7 +35,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         if Config.enableOptionalModules {
             MessagingPushAPN.initialize(
                 withConfig: MessagingPushConfigBuilder()
-                    .autoFetchDeviceToken(true)
+                    .autoFetchDeviceToken(false)
                     .autoTrackPushEvents(true)
                     .showPushAppInForeground(true)
                     .build()
@@ -43,9 +43,47 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
             registerPushActionCategories()
             UNUserNotificationCenter.current().delegate = self
+            // Manually trigger APN registration since autoFetchDeviceToken is
+            // disabled above -- didRegisterForRemoteNotificationsWithDeviceToken
+            // below is where we apply the app-level "only register if changed" guard.
+            application.registerForRemoteNotifications()
         }
 
         return true
+    }
+
+    // MARK: - Device token registration (app-level guard)
+
+    private static let lastRegisteredDeviceTokenKey = "zixflow_demo_last_registered_device_token"
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+
+        // App-level guard: only call registerDeviceToken() when the token has
+        // actually changed since the last time we registered it. iOS commonly
+        // calls this delegate method again on every app launch even when the
+        // token hasn't changed, which would otherwise spam a "Device Created or
+        // Updated" event each time for no reason. Persisted in UserDefaults (not
+        // just an in-memory field) so the check survives the app process being
+        // killed while backgrounded.
+        let defaults = UserDefaults.standard
+        if defaults.string(forKey: Self.lastRegisteredDeviceTokenKey) == tokenString {
+            print("[ZixflowDemo] Device token unchanged since last registration, skipping duplicate registerDeviceToken call")
+            return
+        }
+
+        MessagingPushAPN.shared.registerDeviceToken(apnDeviceToken: deviceToken)
+        defaults.set(tokenString, forKey: Self.lastRegisteredDeviceTokenKey)
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        print("[ZixflowDemo] Failed to register for remote notifications: \(error.localizedDescription)")
     }
 
     // MARK: - Push action buttons (ZX_2BTN)

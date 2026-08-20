@@ -47,10 +47,36 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         private const val CHANNEL_ID = "zixflow_default"
         private const val CHANNEL_NAME = "Zixflow Notifications"
         const val EXTRA_DEEPLINK = "deeplink_url"
+
+        private const val PREFS_NAME = "zixflow_demo_prefs"
+        private const val KEY_LAST_REGISTERED_DEVICE_TOKEN = "last_registered_device_token"
+
+        /**
+         * App-level guard: only call registerDeviceToken() when the token has
+         * actually changed since the last time we registered it. onNewToken()
+         * (and other places apps typically call registerDeviceToken from, e.g.
+         * on every app launch) can otherwise fire repeatedly with the exact same
+         * token, spamming a "Device Created or Updated" event each time for no
+         * reason. Persisted in SharedPreferences (not just an in-memory field)
+         * so the check survives the process being killed while backgrounded.
+         */
+        private fun hasDeviceTokenChanged(context: Context, token: String): Boolean {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val lastToken = prefs.getString(KEY_LAST_REGISTERED_DEVICE_TOKEN, null)
+            if (lastToken == token) return false
+            prefs.edit().putString(KEY_LAST_REGISTERED_DEVICE_TOKEN, token).apply()
+            return true
+        }
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+
+        if (!hasDeviceTokenChanged(applicationContext, token)) {
+            Log.d(TAG, "Device token unchanged since last registration, skipping duplicate registerDeviceToken call")
+            return
+        }
+
         // Try the SDK's own token handling first (unaffected by the push-casing bug).
         try {
             ZixflowFirebaseMessagingService.onNewToken(applicationContext, token)
