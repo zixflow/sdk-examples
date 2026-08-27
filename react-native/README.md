@@ -137,7 +137,32 @@ npm run android  # emulator or device
 | **iOS** | `AppDelegate` (and APN/FCM snippets) register `ZX_2BTN` with `ACTION_0` / `ACTION_1`. Use `src/pushActions.ts` (`parseActionButtons`, `trackActionClick`) when action payloads reach JS. |
 | **Android** | The RN bridge does **not** expose `setNotificationCallback` from JS (only `pushClickBehavior`). This demo wires it in native Kotlin after JS `initialize`: `PushActionButtonsInstaller` + `PushActionButtons` + `NotificationActionReceiver` under `android/app/.../com/zixflow/demo/`. Snippets for other apps: `native-snippets/android/`. |
 
-## Secrets (do not commit)
+## Push Test Matrix (gorush FCM/APNs cases)
+
+Test cases: [`android-fcm-push-test-cases-v2.md`](../../android-fcm-push-test-cases-v2.md) (13 Android cases) · [`ios-push-test-cases-v2.md`](../../ios-push-test-cases-v2.md) (19 iOS cases) — direct gorush `/api/v1/push` payloads.
+
+`src/pushHandlers.ts` (via `@react-native-firebase/messaging` + `notifee`) is JS-only on both platforms and has two distinct paths, switched purely by **app state** + **payload shape** — no toggle needed:
+
+| Path | When it fires | Code involved | What you'll see |
+|---|---|---|---|
+| **Solely handled by FCM/APNs** | App backgrounded/killed + payload has a `notification` block | Neither `onMessage` nor `firebaseBackgroundMessageHandler` calls `showNotification` | System tray shows exactly what FCM/APNs sent, untouched by JS |
+| **Custom handled, no UI** | Payload has **no** `notification` block and no `title`/`body` in `data` (pure silent/data-sync — Android Case 12, iOS Case 8 & 18) — any app state | `onMessage` / `firebaseBackgroundMessageHandler` (both fixed in `pushHandlers.ts`) | Nothing appears in the tray. Console logs `Silent/data-only push (no notification content) — processing data, showing no UI`; Delivered is still tracked |
+
+Foreground delivery is a third, pre-existing case: `onMessage` always fires while the app is open (neither platform auto-shows a notification in foreground) — this demo then calls `notifee.displayNotification` itself (image, actions, sound, badge). That's the existing "custom UI" feature area and is unchanged here.
+
+**Why the background handler also checks `message.notification`:** FCM/APNs already auto-display a `notification`-block push while backgrounded — `firebaseBackgroundMessageHandler` still runs (so the app can process the accompanying `data`), but it must **not** also call `showNotification`, or the user sees a duplicate.
+
+### Running each case
+
+0. Use the **Custom handling** switch on the home screen (persisted via `AsyncStorage`, read by both the foreground listener and `firebaseBackgroundMessageHandler`) to make `pushHandlers.ts` do nothing at all, regardless of app state — proves "solely handled by FCM/APNs" even in foreground.
+1. Run the app, grab the token via **Get registered token** (also printed to console as `FCM token registered:`).
+2. Send the corresponding payload from the docs above to your own gorush instance (never embed gorush/admin credentials in this app).
+3. For notification-block cases: **background the app** before sending to observe the pure-FCM/APNs path.
+4. For the silent/data-only cases: app state doesn't matter — watch the console for the silent-push log line instead of the tray.
+
+> **iOS silent/background pushes (Case 8, 18):** `@react-native-firebase/messaging`'s background handler wires the native APNs `content-available` hook automatically — no extra native code is required in `ios/ZixflowRNDemo/AppDelegate.swift` for this repo's JS-only setup.
+
+
 
 - Real API keys in `src/config.ts`
 - `android/app/google-services.json` (and misnamed `google-service.json`)

@@ -86,6 +86,53 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         print("[ZixflowDemo] Failed to register for remote notifications: \(error.localizedDescription)")
     }
 
+    // MARK: - Silent / background push (Case 8 & 18: content-available, no aps.alert)
+
+    /// Called for pure data/"content-available" pushes when the app is backgrounded or
+    /// killed — NOT for alert pushes (those go through `willPresent`/the system tray
+    /// instead). This is "handled by ourselves, no custom UI": we process `data`/
+    /// `userInfo` and track Delivered, but deliberately show nothing — there is no
+    /// `aps.alert` to present. Requires `UIBackgroundModes: remote-notification` in
+    /// Info.plist (added) or this method is never invoked.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard PushSettings.isCustomHandlingEnabled else {
+            print("[PushHandlers] Custom handling OFF — APNs handles this push entirely, app code does nothing")
+            completionHandler(.noData)
+            return
+        }
+
+        print("[PushHandlers] Silent/background push received (no UI) — userInfo: \(userInfo)")
+
+        let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
+        let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
+
+        if !deliveryId.isEmpty && !deliveryToken.isEmpty {
+            logOutgoingTrack(
+                kind: "DELIVERED",
+                source: "application(_:didReceiveRemoteNotification:fetchCompletionHandler:) (silent push)",
+                payload: [
+                    "Zixflow-Delivery-ID": deliveryId,
+                    "Zixflow-Delivery-Token": deliveryToken,
+                    "event": "delivered",
+                ]
+            )
+            MessagingPush.shared.trackMetric(
+                deliveryID: deliveryId,
+                event: .delivered,
+                deviceToken: deliveryToken
+            )
+        } else {
+            print("[PushHandlers] Skipped DELIVERED tracking (silent push): missing Zixflow-Delivery-ID/Token in payload")
+        }
+
+        // Real app-specific background work (data sync, etc.) would go here.
+        completionHandler(.newData)
+    }
+
     // MARK: - Push action buttons (ZX_2BTN)
 
     private func registerPushActionCategories() {
@@ -107,6 +154,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        guard PushSettings.isCustomHandlingEnabled else {
+            print("[PushHandlers] Custom handling OFF — APNs handles this push entirely, app code does nothing")
+            completionHandler([])
+            return
+        }
+
         let userInfo = notification.request.content.userInfo
         let deliveryId = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-ID", "ZIXFLOW-Delivery-ID"])
         let deliveryToken = deliveryValue(from: userInfo, keys: ["Zixflow-Delivery-Token", "ZIXFLOW-Delivery-Token"])
@@ -132,6 +185,16 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             )
         } else {
             print("[PushHandlers] Skipped DELIVERED tracking: missing Zixflow-Delivery-ID/Token in payload")
+        }
+
+        // Diagnostics only — on iOS, the real `apns-priority` header and Firebase's
+        // `fcm_options.analytics_label` are server-side/APNs-level concerns with no
+        // client-visible equivalent. These are our own custom `data.*`-style fields
+        // (if Zixflow chooses to send them) for demo parity with Android/Flutter/RN.
+        let priority = userInfo["priority"] as? String
+        let analyticsLabel = userInfo["analytics_label"] as? String
+        if priority != nil || analyticsLabel != nil {
+            print("[PushHandlers] Diagnostics — priority: \(priority ?? "(unset)"), analytics_label: \(analyticsLabel ?? "(unset)")")
         }
 
         completionHandler([.banner, .sound, .badge, .list])
@@ -180,7 +243,12 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 }
 
                 let deeplink = userInfo["deeplink_url"] as? String ?? ""
-                if !NavigationRouter.shared.open(deeplink: deeplink),
+                let clickAction = userInfo["click_action"] as? String
+                // click_action takes priority over deeplink_url — mirrors the historical
+                // Android "which screen" signal, resolved to our own routes for parity
+                // across all 4 sample apps (iOS has no native client-visible click_action).
+                if !NavigationRouter.shared.openClickAction(clickAction),
+                   !NavigationRouter.shared.open(deeplink: deeplink),
                    !deeplink.isEmpty, let url = URL(string: deeplink) {
                     UIApplication.shared.open(url)
                 }

@@ -48,6 +48,23 @@
             android:layout_height="wrap_content"
             android:text="Copy device token" />
 
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switchCustomHandling"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp"
+            android:text="Custom handling"
+            android:checked="true" />
+
+        <TextView
+            android:id="@+id/switchCustomHandlingSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="8dp"
+            android:textSize="12sp"
+            android:text="App code processes data + shows notifications" />
+
         <Button android:id="@+id/btnIdentify" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Identify" />
         <Button android:id="@+id/btnTrack" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Track" />
         <Button android:id="@+id/btnScreen" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Screen" />

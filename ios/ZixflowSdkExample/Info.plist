@@ -37,5 +37,12 @@
 	<string>We use your location to send relevant notifications</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We use your location to send relevant notifications</string>
+	<!-- Required so application(_:didReceiveRemoteNotification:fetchCompletionHandler:)
+	     actually fires for silent/background (content-available) pushes — see
+	     Case 8/18 in ios-push-test-cases-v2.md. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

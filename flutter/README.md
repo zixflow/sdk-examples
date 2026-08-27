@@ -130,7 +130,30 @@ When `enablePush` is true, `main.dart` initializes Firebase and `PushHandlers` (
 
 See [Push Notification Tracking](https://docs.zixflow.com/documentation/sdk/flutter/push-notification-tracking) for payload field details.
 
-## Optional: Location tracking
+## Push Test Matrix (gorush FCM/APNs cases)
+
+Test cases: [`android-fcm-push-test-cases-v2.md`](../../android-fcm-push-test-cases-v2.md) (13 Android cases) · [`ios-push-test-cases-v2.md`](../../ios-push-test-cases-v2.md) (19 iOS cases) — direct gorush `/api/v1/push` payloads.
+
+`lib/push_handlers.dart` is pure Dart on both platforms (no native Kotlin/Swift push code) and now has two distinct paths, switched purely by **app state** + **payload shape** — no toggle needed:
+
+| Path | When it fires | Code involved | What you'll see |
+|---|---|---|---|
+| **Solely handled by FCM/APNs** | App backgrounded/killed + payload has a `notification` block | Neither `onMessage` nor `firebaseMessagingBackgroundHandler` builds a local notification | System tray shows exactly what FCM/APNs sent, untouched by Dart code |
+| **Custom handled, no UI** | Payload has **no** `notification` block and no `title`/`body` in `data` (pure silent/data-sync — Android Case 12, iOS Case 8 & 18) — any app state | `firebaseMessagingBackgroundHandler` / `onMessage` listener (both fixed) | Nothing appears in the tray. Console logs `Silent/data-only push (no notification content) — processing data, showing no UI`; Delivered is still tracked |
+
+Foreground delivery is a third, pre-existing case: the `onMessage` listener always fires while the app is open (neither platform auto-shows a notification in foreground) — this app then builds a local notification itself via `flutter_local_notifications` (image, actions, sound, sticky). That's the existing "custom UI" feature area and is unchanged here.
+
+**Why the background handler also checks `message.notification != null`:** FCM/APNs already auto-display a `notification`-block push while backgrounded — `firebaseMessagingBackgroundHandler` still runs (Firebase spawns the isolate so the app can process the accompanying `data`), but it must **not** also call `_showLocalNotification`, or the user sees a duplicate.
+
+### Running each case
+
+0. Use the **Custom handling** switch on the home screen (persisted via `SharedPreferences`, read by both the foreground listener and the background isolate) to make `push_handlers.dart` do nothing at all, regardless of app state — proves "solely handled by FCM/APNs" even in foreground.
+1. Run the app, grab the token from the on-screen field / console (`FCM token registered:` / `FCM token refreshed:`).
+2. Send the corresponding payload from the docs above to your own gorush instance (never embed gorush/admin credentials in this app).
+3. For notification-block cases: **background the app** before sending to observe the pure-FCM/APNs path.
+4. For the silent/data-only cases: app state doesn't matter — watch the console for the silent-push log line instead of the tray.
+
+
 
 - **Android:** `zixflow_location_enabled=true` is set in `android/gradle.properties`.
 - **Android permissions:** `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` in `AndroidManifest.xml`.

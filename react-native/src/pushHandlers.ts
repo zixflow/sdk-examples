@@ -1,4 +1,5 @@
 import { Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import messaging, {
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
@@ -32,8 +33,36 @@ import { navigate, resolveInAppRoute } from './navigation';
 
 const ANDROID_CHANNEL_ID = 'zixflow_default';
 const ANDROID_CHANNEL_NAME = 'Zixflow Notifications';
+// Selected when `data.priority === 'normal'` — lower importance, no heads-up banner,
+// mirroring FCM's own high/normal priority distinction (which otherwise only affects
+// delivery timing, not anything visible — this channel makes the difference observable
+// in the custom-handled path).
+const ANDROID_CHANNEL_ID_NORMAL = 'zixflow_normal';
+// Bundled at android/app/src/main/res/raw/notification_tone.wav — reference it in a
+// test payload as `"sound": "notification_tone"` to hear a real custom sound (a synthesized
+// two-tone chime, not a licensed asset, safe to ship in this demo).
+const BUNDLED_TEST_SOUND = 'notification_tone';
 
 let cachedToken: string | undefined;
+
+// Persisted (not just in-memory) so a fresh headless JS context spun up for
+// `firebaseBackgroundMessageHandler` after the app was fully killed still sees
+// whatever the user last set in the UI.
+const CUSTOM_HANDLING_PREF_KEY = 'zixflow_demo_custom_handling_enabled';
+
+// Cached for synchronous reads in the foreground `onMessage` listener (same JS
+// context as the UI, so no need to hit AsyncStorage on every message).
+let cachedCustomHandlingEnabled = true;
+
+async function isCustomHandlingEnabled(): Promise<boolean> {
+  const stored = await AsyncStorage.getItem(CUSTOM_HANDLING_PREF_KEY);
+  return stored == null ? true : stored === 'true';
+}
+
+async function setCustomHandlingEnabled(value: boolean): Promise<void> {
+  cachedCustomHandlingEnabled = value;
+  await AsyncStorage.setItem(CUSTOM_HANDLING_PREF_KEY, value ? 'true' : 'false');
+}
 
 type NotificationDataValue = string | number | object;
 type NotificationData = Record<string, NotificationDataValue>;
@@ -104,6 +133,22 @@ function isValidImageUrl(value?: string): value is string {
 }
 
 /**
+ * True if `message` carries anything worth showing — a native `notification`
+ * block, or a `title`/`body` in `data` (Zixflow's own custom-UI scheme, since
+ * the real dashboard sends data-only pushes). False for pure silent/
+ * background-sync pushes (Case 12 android / Case 8 & 18 iOS in the test docs)
+ * — those must be "handled by ourselves, no custom UI": process data, show
+ * nothing.
+ */
+function hasDisplayableContent(
+  message: FirebaseMessagingTypes.RemoteMessage,
+): boolean {
+  return Boolean(
+    message.notification || message.data?.title || message.data?.body,
+  );
+}
+
+/**
  * Logs the exact outgoing payload being sent to the Zixflow SDK for a
  * Delivered/Opened/Clicked tracking call — use this to verify what's actually
  * being POSTed for each notification lifecycle event during testing.
@@ -154,18 +199,36 @@ async function showNotification(
 
   const hasBadge = badgeCount != null && !Number.isNaN(badgeCount);
 
+  // Priority — FCM's own android.priority only affects delivery timing (Doze bypass),
+  // not anything visible. We make the difference observable here by picking a lower-
+  // importance channel for "normal", so a normal-priority push doesn't heads-up banner.
+  const priorityFromData = getStringField(data, 'priority');
+  const channelId = priorityFromData === 'normal' ? ANDROID_CHANNEL_ID_NORMAL : ANDROID_CHANNEL_ID;
+
+  // click_action — historically an Android intent-action string used by the OS-rendered
+  // path to launch a matching <intent-filter> Activity. notifee/RN has no direct "set
+  // Intent.action" API, so we treat it as an alternate, higher-priority routing signal
+  // for the body tap, resolved the same way as deeplink_url (see resolveClickAction).
+  const clickAction = getStringField(data, 'click_action');
+
+  // Diagnostic-only fields — not used to build the notification, just surfaced in
+  // tracking so campaign debugging can see what the server actually sent.
+  const ttl = message.ttl;
+  const analyticsLabel = getStringField(data, 'analytics_label');
+
   // notifee's validators check for key *presence* (`hasOwnProperty`), not just
   // truthiness — so `sound: undefined` / `badgeCount: undefined` / `largeIcon:
   // undefined` still fail validation ("must be a string/number value if
   // specified") because the key exists on the object. Conditionally spread
   // each optional field so the key is omitted entirely when there's no value.
-  await notifee.displayNotification({
+  const notificationId = await notifee.displayNotification({
     title,
     body,
-    data,
+    data: { ...data, ...(clickAction ? { click_action: clickAction } : {}) },
     android: {
-      channelId: ANDROID_CHANNEL_ID,
+      channelId,
       importance: AndroidImportance.HIGH,
+      smallIcon: 'ic_notification', // matches the bundled drawable + manifest default
       pressAction: { id: 'default' },
       actions: buildNotifeeActions(data),
       ...(isValidImageUrl(largeIconUrl)
@@ -184,6 +247,27 @@ async function showNotification(
       ...(hasBadge ? { badgeCount } : {}),
     },
   });
+
+  // ttl_seconds — our own demo interpretation of "how long this notification stays
+  // visible", distinct from FCM's actual server-side delivery-queue TTL (which the app
+  // never observes directly; `message.ttl` above is diagnostic only). Not part of the
+  // official Zixflow payload schema — opt-in via `data.ttl_seconds` for testing.
+  const ttlSecondsFromData = getStringField(data, 'ttl_seconds');
+  if (ttlSecondsFromData) {
+    const ttlSeconds = Number.parseInt(ttlSecondsFromData, 10);
+    if (!Number.isNaN(ttlSeconds) && ttlSeconds > 0) {
+      setTimeout(() => {
+        notifee.cancelNotification(notificationId).catch(() => {});
+        console.log(`[PushHandlers] Notification ${notificationId} auto-cancelled after ttl_seconds=${ttlSeconds}`);
+      }, ttlSeconds * 1000);
+    }
+  }
+
+  if (ttl != null || priorityFromData || analyticsLabel) {
+    console.log(
+      `[PushHandlers] Diagnostics — ttl(server): ${ttl}, priority: ${priorityFromData ?? '(unset)'}, analytics_label: ${analyticsLabel ?? '(unset)'}`,
+    );
+  }
 }
 
 
@@ -241,6 +325,16 @@ function trackDelivered(data: Record<string, unknown>, source: string) {
   Zixflow.trackMetric(payload).catch((error) => {
     console.log(`[PushHandlers] trackMetric(Delivered) failed: ${error}`);
   });
+
+  // analytics_label isn't part of trackMetric's fixed schema — surfaced as a separate
+  // named event so it's still queryable/correlatable in the dashboard.
+  const analyticsLabel = getStringField(data, 'analytics_label');
+  if (analyticsLabel) {
+    Zixflow.track('Push Notification Analytics Label', {
+      'Zixflow-Delivery-ID': deliveryId,
+      analytics_label: analyticsLabel,
+    }).catch(() => {});
+  }
 }
 
 /** Tracks "Push Notification Action Clicked" and opens the button's deeplink. */
@@ -289,6 +383,26 @@ function handleDeeplink(deeplink?: string) {
   Linking.openURL(deeplink).catch(() => {});
 }
 
+/**
+ * click_action is the classic Android "which screen" signal (paired with a matching
+ * <intent-filter> on the OS-rendered path) — here we just map a couple of known tokens
+ * to our own routes, taking priority over `deeplink_url` for the body tap when present.
+ */
+function resolveClickAction(clickAction?: string): boolean {
+  if (!clickAction) return false;
+  switch (clickAction) {
+    case 'OPEN_SALE':
+      navigate('sale');
+      return true;
+    case 'OPEN_DASHBOARD':
+      navigate('dashboard');
+      return true;
+    default:
+      console.log(`[PushHandlers] Unrecognized click_action: ${clickAction}`);
+      return false;
+  }
+}
+
 /** Handles a notifee event (foreground or background) for a tap or action press. */
 function handleNotifeeEvent(type: EventType, detail: { notification?: Notification; pressAction?: { id: string } }) {
   const data = (detail.notification?.data ?? {}) as Record<string, unknown>;
@@ -297,7 +411,10 @@ function handleNotifeeEvent(type: EventType, detail: { notification?: Notificati
     // Notification BODY tap (not an action button) — must always track "Opened".
     console.log('[PushHandlers] Notification BODY tapped (notifee PRESS)');
     trackOpened(data, 'notifee PRESS (body tap)');
-    handleDeeplink(getStringField(data, 'deeplink_url'));
+    // click_action takes priority over deeplink_url when both are present.
+    if (!resolveClickAction(getStringField(data, 'click_action'))) {
+      handleDeeplink(getStringField(data, 'deeplink_url'));
+    }
   } else if (type === EventType.ACTION_PRESS && detail.pressAction) {
     trackOpened(data, 'notifee ACTION_PRESS');
     trackActionClick(data, detail.pressAction.id);
@@ -316,14 +433,30 @@ export const PushHandlers = {
   /** FCM token, updated on registration/refresh — read by the UI for display. */
   fcmToken: undefined as string | undefined,
 
+  /** Current push handling mode, read by the UI toggle. */
+  isCustomHandlingEnabled,
+
+  /** Sets the push handling mode from the UI toggle. */
+  async setCustomHandlingEnabled(value: boolean): Promise<void> {
+    await setCustomHandlingEnabled(value);
+  },
+
   /** Call after `Zixflow.initialize()`. Sets up permissions, token, and listeners. */
   async initialize(): Promise<void> {
+    cachedCustomHandlingEnabled = await isCustomHandlingEnabled();
+
     await notifee.requestPermission();
     if (Platform.OS === 'android') {
       await notifee.createChannel({
         id: ANDROID_CHANNEL_ID,
         name: ANDROID_CHANNEL_NAME,
         importance: AndroidImportance.HIGH,
+      });
+      // Selected when data.priority === 'normal' — no heads-up banner, just the shade.
+      await notifee.createChannel({
+        id: ANDROID_CHANNEL_ID_NORMAL,
+        name: 'Zixflow Notifications (Normal)',
+        importance: AndroidImportance.DEFAULT,
       });
     }
 
@@ -346,7 +479,21 @@ export const PushHandlers = {
     // Foreground: FCM message received while app is open.
     messaging().onMessage(async (message) => {
       logIncomingPush('FOREGROUND', message);
+
+      if (!cachedCustomHandlingEnabled) {
+        console.log(
+          '[PushHandlers] Custom handling OFF — Firebase/APNs handles this push entirely, app code does nothing',
+        );
+        return;
+      }
+
       trackDelivered((message.data ?? {}) as Record<string, unknown>, 'onMessage (foreground)');
+      if (!hasDisplayableContent(message)) {
+        console.log(
+          '[PushHandlers] Silent/data-only push (no notification content) — processing data, showing no UI',
+        );
+        return;
+      }
       await showNotification(message);
     });
 
@@ -401,7 +548,35 @@ export async function firebaseBackgroundMessageHandler(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
   logIncomingPush('BACKGROUND/TERMINATED', message);
+
+  if (!(await isCustomHandlingEnabled())) {
+    console.log(
+      '[PushHandlers] Custom handling OFF — Firebase/APNs handles this push entirely, app code does nothing',
+    );
+    return;
+  }
+
   trackDelivered((message.data ?? {}) as Record<string, unknown>, 'firebaseBackgroundMessageHandler');
+
+  if (!hasDisplayableContent(message)) {
+    console.log(
+      '[PushHandlers] Silent/data-only push (no notification content) — processing data, showing no UI',
+    );
+    return;
+  }
+
+  // A `notification` block delivered while backgrounded/terminated is already
+  // auto-displayed by the OS (FCM/APNs bypass this handler's *display* concerns —
+  // it only runs so the app can process data alongside it). Building our own
+  // notifee notification here too would show a duplicate. Only build one ourselves
+  // for data-only messages carrying our own custom title/body fields.
+  if (message.notification) {
+    console.log(
+      '[PushHandlers] Notification-block push in background — solely handled by FCM/APNs, skipping local notification to avoid duplicate',
+    );
+    return;
+  }
+
   await showNotification(message);
 }
 

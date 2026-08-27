@@ -43,4 +43,25 @@ final class NavigationRouter: ObservableObject {
             return false
         }
     }
+
+    /// Resolves the custom `click_action` token (our own Zixflow scheme — iOS has no
+    /// native client-visible `click_action` field at all; this exists purely for parity
+    /// with the Android/Flutter/RN samples' custom-handled routing). Takes priority over
+    /// `deeplink_url` when both are present. Returns `true` if handled.
+    @discardableResult
+    func openClickAction(_ clickAction: String?) -> Bool {
+        switch clickAction {
+        case "OPEN_SALE":
+            activeScreen = .sale
+            return true
+        case "OPEN_DASHBOARD":
+            activeScreen = .dashboard
+            return true
+        default:
+            if let clickAction, !clickAction.isEmpty {
+                print("[PushHandlers] Unrecognized click_action: \(clickAction)")
+            }
+            return false
+        }
+    }
 }

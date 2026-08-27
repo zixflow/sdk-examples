@@ -46,4 +46,21 @@ object DeeplinkRouter {
             // No app can handle this URI (e.g. unsupported scheme) — ignore.
         }
     }
+
+    /**
+     * Resolves the custom `data.click_action` token (our own Zixflow scheme, not
+     * FCM's native `android.notification.click_action` field) to one of this demo's
+     * screens. Returns true if handled — caller should skip `deeplink_url` in that case.
+     */
+    fun openClickAction(context: Context, clickAction: String?): Boolean {
+        val intent = when (clickAction) {
+            "OPEN_SALE" -> Intent(context, SaleActivity::class.java)
+            "OPEN_DASHBOARD" -> Intent(context, DashboardActivity::class.java)
+            else -> null
+        } ?: return false
+
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        return true
+    }
 }

@@ -5,6 +5,7 @@ import ZixflowDataPipelines
 struct ContentView: View {
     @State private var status = "Ready"
     @State private var deviceToken: String?
+    @State private var customHandlingEnabled = PushSettings.isCustomHandlingEnabled
 
     private let tokenPollTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -19,6 +20,21 @@ struct ContentView: View {
                     Text(status)
                         .font(.footnote)
                         .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle("Custom handling", isOn: $customHandlingEnabled)
+                            .onChange(of: customHandlingEnabled) { newValue in
+                                PushSettings.isCustomHandlingEnabled = newValue
+                                status = "Push handling mode: \(newValue ? "custom" : "APNs-only")"
+                            }
+                        Text(
+                            customHandlingEnabled
+                                ? "App code processes data + shows notifications"
+                                : "APNs handles pushes entirely — app code does nothing"
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Device Token")

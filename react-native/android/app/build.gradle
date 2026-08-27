@@ -81,7 +81,7 @@ android {
     defaultConfig {
         // Must match android_client_info.package_name in google-services.json
         // (the real Firebase-registered package) or FCM token registration fails.
-        applicationId "com.zixflow.demo"
+        applicationId "com.company.zixflow"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

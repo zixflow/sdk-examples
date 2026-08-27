@@ -39,6 +39,7 @@ Future<void> main() async {
 
   final config = ZixflowConfig(
     apiKey: AppConfig.zixflowApiKey,
+    apiHost: AppConfig.zixflowApiHost,
     logLevel: LogLevel.debug,
     locationConfig: AppConfig.enableLocation
         ? LocationConfig(trackingMode: LocationTrackingMode.manual)
@@ -220,6 +221,31 @@ class _DemoHomePageState extends State<DemoHomePage> {
           if (AppConfig.enablePush)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PushHandlers.customHandlingEnabled,
+                builder: (context, customHandlingEnabled, _) {
+                  return SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Custom handling'),
+                    subtitle: Text(
+                      customHandlingEnabled
+                          ? 'App code processes data + shows notifications'
+                          : 'Firebase/APNs handles pushes entirely — app code does nothing',
+                    ),
+                    value: customHandlingEnabled,
+                    onChanged: (value) {
+                      PushHandlers.setCustomHandlingEnabled(value);
+                      _setStatus(
+                        'Push handling mode: ${value ? 'custom' : 'Firebase/APNs-only'}',
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          if (AppConfig.enablePush)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: ValueListenableBuilder<String?>(
                 valueListenable: PushHandlers.fcmToken,
                 builder: (context, token, _) {

@@ -3,6 +3,7 @@ import {
   Clipboard,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -50,6 +51,7 @@ export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [deviceTokenInput, setDeviceTokenInput] = useState('');
   const [fcmToken, setFcmToken] = useState<string | undefined>(undefined);
+  const [customHandlingEnabled, setCustomHandlingEnabled] = useState(true);
   const [screen, setScreen] = useState<ScreenName>(getCurrentScreen());
 
   useEffect(() => subscribe(setScreen), []);
@@ -77,6 +79,7 @@ export default function App() {
         appendLog('Zixflow SDK initialized');
         await PushHandlers.initialize();
         setFcmToken(PushHandlers.fcmToken);
+        setCustomHandlingEnabled(await PushHandlers.isCustomHandlingEnabled());
         appendLog(
           'Push handling initialized (pure JS: @react-native-firebase/messaging + notifee). Action buttons: iOS ZX_2BTN in AppDelegate.',
         );
@@ -296,6 +299,25 @@ export default function App() {
           </Text>
         </View>
       ) : null}
+
+      <View style={styles.tokenBox}>
+        <View style={styles.tokenHeaderRow}>
+          <Text style={styles.statusLabel}>Custom handling</Text>
+          <Switch
+            value={customHandlingEnabled}
+            onValueChange={async (value) => {
+              setCustomHandlingEnabled(value);
+              await PushHandlers.setCustomHandlingEnabled(value);
+              appendLog(`Push handling mode: ${value ? 'custom' : 'Firebase/APNs-only'}`);
+            }}
+          />
+        </View>
+        <Text style={styles.statusNote}>
+          {customHandlingEnabled
+            ? 'App code processes data + shows notifications'
+            : 'Firebase/APNs handles pushes entirely — app code does nothing'}
+        </Text>
+      </View>
 
       <Section title="Core">
         <View style={styles.grid}>

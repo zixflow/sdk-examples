@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -27,6 +28,34 @@ List<Map<String, dynamic>> parseActionButtons(dynamic raw) {
 
 const String _androidChannelId = 'zixflow_default';
 const String _androidChannelName = 'Zixflow Notifications';
+// Selected when data['priority'] == 'normal' — lower importance, no heads-up banner,
+// making FCM's own high/normal priority distinction (otherwise only a delivery-timing
+// hint) observable in the custom-handled path.
+const String _androidChannelIdNormal = 'zixflow_normal';
+const String _androidChannelNameNormal = 'Zixflow Notifications (normal priority)';
+
+// Persisted (not just in-memory) so the background isolate — which does NOT
+// share Dart statics with the main isolate — can read the same value the user
+// set in the UI. Defaults to true (today's existing custom-handling behavior).
+const String _customHandlingPrefKey = 'zixflow_demo_custom_handling_enabled';
+
+Future<bool> _isCustomHandlingEnabled() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool(_customHandlingPrefKey) ?? true;
+}
+
+/// True if [message] carries anything worth showing to the user — a native
+/// `notification` block, or a `title`/`body` in `data` (Zixflow's own custom-UI
+/// scheme, since the real dashboard sends data-only pushes — see BUG-A12 note
+/// in the Android sample). False for pure silent/background-sync pushes (Case
+/// 12 in android-fcm-push-test-cases-v2.md / Case 8 & 18 in the iOS doc) —
+/// those must be "handled by ourselves, no custom UI": process data, show
+/// nothing.
+bool _hasDisplayableContent(RemoteMessage message) {
+  return message.notification != null ||
+      message.data['title'] != null ||
+      message.data['body'] != null;
+}
 
 /// Background isolate entry point for FCM messages (app backgrounded or
 /// terminated). Pure Dart: builds and displays the local notification —
@@ -36,7 +65,6 @@ const String _androidChannelName = 'Zixflow Notifications';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   _logIncomingPush('BACKGROUND/TERMINATED', message);
-  _trackDelivered(message.data, 'firebaseMessagingBackgroundHandler');
 
   // Fresh plugin instance for this isolate — method-channel calls are
   // stateless, so there's no need to share the foreground singleton.
@@ -57,6 +85,35 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       importance: Importance.high,
     ),
   );
+
+  if (!await _isCustomHandlingEnabled()) {
+    debugPrint(
+      '[PushHandlers] Custom handling OFF — rendering stock-FCM-equivalent only (standard fields, no Zixflow extras)',
+    );
+    await _showStockEquivalentNotification(plugin, message);
+    return;
+  }
+
+  _trackDelivered(message.data, 'firebaseMessagingBackgroundHandler');
+
+  if (!_hasDisplayableContent(message)) {
+    debugPrint(
+      '[PushHandlers] Silent/data-only push (no notification content) — processing data, showing no UI',
+    );
+    return;
+  }
+
+  // A `notification` block delivered while backgrounded/terminated is already
+  // auto-displayed by the OS (FCM bypasses this handler's *display* concerns —
+  // it only runs this isolate to let the app process data alongside it). Building
+  // our own local notification here too would show a duplicate. Only build one
+  // ourselves for data-only messages carrying our own custom title/body fields.
+  if (message.notification != null) {
+    debugPrint(
+      '[PushHandlers] Notification-block push in background — solely handled by FCM/OS, skipping local notification to avoid duplicate',
+    );
+    return;
+  }
 
   await _showLocalNotification(plugin, message);
 }
@@ -88,6 +145,22 @@ class PushHandlers {
   /// FCM token, exposed for UI display (e.g. copy-to-clipboard).
   static final ValueNotifier<String?> fcmToken = ValueNotifier<String?>(null);
 
+  /// Push handling mode, exposed for a UI toggle. `true` (default) = today's
+  /// existing custom handling (process data, track Delivered, show a local
+  /// notification when there's displayable content). `false` = "solely
+  /// handled by FCM/APNs": this app's code does nothing at all for incoming
+  /// pushes — background/killed notification-block pushes still show via the
+  /// OS (unaffected either way), but data-only pushes and foreground display
+  /// are entirely skipped, exactly as if no push code had been written.
+  static final ValueNotifier<bool> customHandlingEnabled =
+      ValueNotifier<bool>(true);
+
+  static Future<void> setCustomHandlingEnabled(bool value) async {
+    customHandlingEnabled.value = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_customHandlingPrefKey, value);
+  }
+
   static const String _iosCategoryId = 'ZX_2BTN';
 
   // Persisted key for the last token we actually called registerDeviceToken()
@@ -110,6 +183,8 @@ class PushHandlers {
       badge: true,
       sound: true,
     );
+
+    customHandlingEnabled.value = await _isCustomHandlingEnabled();
 
     await _requestPermission();
     await _initializeLocalNotifications();
@@ -213,7 +288,21 @@ class PushHandlers {
     // Foreground: show the local notification ourselves (with buttons).
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _logIncomingPush('FOREGROUND', message);
+
+      if (!customHandlingEnabled.value) {
+        debugPrint(
+          '[PushHandlers] Custom handling OFF — Firebase/OS handles this push entirely, app code does nothing',
+        );
+        return;
+      }
+
       _trackDelivered(message.data, 'onMessage (foreground)');
+      if (!_hasDisplayableContent(message)) {
+        debugPrint(
+          '[PushHandlers] Silent/data-only push (no notification content) — processing data, showing no UI',
+        );
+        return;
+      }
       _showLocalNotification(_localNotifications, message);
     });
 
@@ -221,7 +310,9 @@ class PushHandlers {
       _logIncomingPush('OPENED (tapped from background)', message);
       debugPrint('[PushHandlers] Notification BODY tapped (app resumed from background)');
       _trackOpened(message.data, 'onMessageOpenedApp (body tap)');
-      _handleDeeplink(message.data['deeplink_url']?.toString());
+      if (!_resolveClickAction(message.data['click_action']?.toString())) {
+        _handleDeeplink(message.data['deeplink_url']?.toString());
+      }
     });
 
     FirebaseMessaging.instance.getInitialMessage().then((message) {
@@ -229,7 +320,9 @@ class PushHandlers {
         _logIncomingPush('OPENED (launched from terminated)', message);
         debugPrint('[PushHandlers] Notification BODY tapped (app launched from terminated)');
         _trackOpened(message.data, 'getInitialMessage (body tap)');
-        _handleDeeplink(message.data['deeplink_url']?.toString());
+        if (!_resolveClickAction(message.data['click_action']?.toString())) {
+          _handleDeeplink(message.data['deeplink_url']?.toString());
+        }
       }
     });
   }
@@ -274,7 +367,9 @@ void _handleNotificationResponse(NotificationResponse response) {
           : payload['deeplink_url']?.toString(),
     );
   } else {
-    _handleDeeplink(payload['deeplink_url']?.toString());
+    if (!_resolveClickAction(payload['click_action']?.toString())) {
+      _handleDeeplink(payload['deeplink_url']?.toString());
+    }
   }
 }
 
@@ -375,6 +470,59 @@ Future<String?> _downloadToTempFile(String? url, String fileName) async {
   }
 }
 
+/// Renders ONLY what the stock FCM contract itself defines — `notification`
+/// title/body and `android.notification.image` — nothing from Zixflow's own
+/// custom `data.*` scheme (no action buttons, no large icon, no badge, no
+/// custom sound). This exists because any app-declared `FirebaseMessagingService`
+/// (which `firebase_messaging`/FlutterFire always installs) permanently
+/// intercepts the OS's own zero-code auto-render path, and FlutterFire's own
+/// built-in fallback (`fcm_fallback_notification_channel`) only does title+body
+/// (BigTextStyle), silently dropping the image. This is the closest faithful
+/// stand-in for genuine stock rendering, using only the fields FCM's own
+/// contract promises.
+Future<void> _showStockEquivalentNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  RemoteMessage message,
+) async {
+  final notification = message.notification;
+  if (notification == null) {
+    // Real stock FCM never auto-renders pure data-only messages either.
+    debugPrint('[PushHandlers] No notification block — stock FCM would show nothing either');
+    return;
+  }
+
+  final title = notification.title ?? '';
+  final body = notification.body ?? '';
+  final imageUrl = notification.android?.imageUrl ?? notification.apple?.imageUrl;
+  final imagePath = await _downloadToTempFile(imageUrl, 'stock_img_${message.hashCode}.jpg');
+
+  final androidDetails = AndroidNotificationDetails(
+    _androidChannelId,
+    _androidChannelName,
+    importance: Importance.high,
+    priority: Priority.high,
+    styleInformation: imagePath != null
+        ? BigPictureStyleInformation(
+            FilePathAndroidBitmap(imagePath),
+            contentTitle: title,
+            summaryText: body,
+          )
+        : null,
+  );
+
+  await plugin.show(
+    message.hashCode,
+    title,
+    body,
+    NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        attachments: imagePath != null ? [DarwinNotificationAttachment(imagePath)] : null,
+      ),
+    ),
+  );
+}
+
 /// Builds and displays the local notification (with dynamic action buttons,
 /// rich media, sound, and badge) for the given [message] using the provided
 /// plugin instance. Works from both the main isolate (foreground) and a
@@ -421,6 +569,25 @@ Future<void> _showLocalNotification(
     );
   }
 
+  // Custom data.priority (distinct from FCM's own android.priority header, which the
+  // app never observes directly) picks the channel — this is what makes priority
+  // visibly different in the custom-handled path (normal = no heads-up banner).
+  final priority = data['priority']?.toString();
+  final channelId = priority == 'normal' ? _androidChannelIdNormal : _androidChannelId;
+  final channelName = priority == 'normal' ? _androidChannelNameNormal : _androidChannelName;
+
+  // click_action — historically an Android intent-action string used by the OS-rendered
+  // path to launch a matching <intent-filter> Activity. It's already present in `data`
+  // (and therefore the notification payload below) if sent — resolved on tap via
+  // _resolveClickAction, taking priority over deeplink_url (see call sites above).
+
+  final analyticsLabel = data['analytics_label']?.toString();
+  if (priority != null || analyticsLabel != null) {
+    debugPrint(
+      '[PushHandlers] Diagnostics — priority: ${priority ?? '(unset)'}, analytics_label: ${analyticsLabel ?? '(unset)'}',
+    );
+  }
+
   StyleInformation? style;
   if (imagePath != null) {
     style = BigPictureStyleInformation(
@@ -439,11 +606,13 @@ Future<void> _showLocalNotification(
   }
 
   final androidDetails = AndroidNotificationDetails(
-    _androidChannelId,
-    _androidChannelName,
+    channelId,
+    channelName,
     channelDescription: 'Zixflow push notifications',
-    importance: Importance.high,
-    priority: Priority.high,
+    icon: 'ic_notification',
+    color: const Color(0xFFFA2438),
+    importance: priority == 'normal' ? Importance.defaultImportance : Importance.high,
+    priority: priority == 'normal' ? Priority.defaultPriority : Priority.high,
     actions: androidActions,
     styleInformation: style,
     largeIcon:
@@ -480,6 +649,18 @@ Future<void> _showLocalNotification(
     ),
     payload: jsonEncode(data),
   );
+
+  // ttl_seconds — our own demo interpretation of "how long this notification stays
+  // visible", distinct from FCM's actual server-side delivery-queue TTL (which the app
+  // never observes directly). Not part of the official Zixflow payload schema — opt-in
+  // via `data.ttl_seconds` for testing.
+  final ttlSeconds = int.tryParse(data['ttl_seconds']?.toString() ?? '');
+  if (ttlSeconds != null && ttlSeconds > 0) {
+    Future.delayed(Duration(seconds: ttlSeconds), () {
+      plugin.cancel(id);
+      debugPrint('[PushHandlers] Notification $id auto-cancelled after ttl_seconds=$ttlSeconds');
+    });
+  }
 }
 
 /// Opens [deeplink] in-app if it matches one of this demo app's own screens
@@ -502,6 +683,27 @@ void _handleDeeplink(String? deeplink) {
     debugPrint('[PushHandlers] Failed to launch deeplink $deeplink: $e');
     return false;
   });
+}
+
+/// Resolves the custom `data.click_action` token (our own Zixflow scheme, not
+/// FCM's native `android.notification.click_action` field, which the OS-rendered
+/// path would route via a matching `<intent-filter>` action string instead) to
+/// one of this demo's screens. Takes priority over `deeplink_url` when present.
+/// Returns true if handled.
+bool _resolveClickAction(String? clickAction) {
+  switch (clickAction) {
+    case 'OPEN_SALE':
+      navigatorKey.currentState?.pushNamed(saleRoute);
+      return true;
+    case 'OPEN_DASHBOARD':
+      navigatorKey.currentState?.pushNamed(dashboardRoute);
+      return true;
+    default:
+      if (clickAction != null && clickAction.isNotEmpty) {
+        debugPrint('[PushHandlers] Unrecognized click_action: $clickAction');
+      }
+      return false;
+  }
 }
 
 /// Logs the exact outgoing payload being sent to the Zixflow SDK for a

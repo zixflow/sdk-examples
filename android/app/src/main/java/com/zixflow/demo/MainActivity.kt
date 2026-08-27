@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.zixflow.sdk.Zixflow
 import com.zixflow.sdk.events.Metric
 import com.zixflow.sdk.events.TrackMetric
@@ -115,6 +116,23 @@ class MainActivity : AppCompatActivity() {
             toast("deleteDeviceToken called")
         }
 
+        val switchCustomHandling = findViewById<SwitchMaterial>(R.id.switchCustomHandling)
+        val switchCustomHandlingSubtitle = findViewById<TextView>(R.id.switchCustomHandlingSubtitle)
+        fun updateCustomHandlingSubtitle(enabled: Boolean) {
+            switchCustomHandlingSubtitle.text = if (enabled) {
+                "App code processes data + shows notifications"
+            } else {
+                "Firebase handles pushes entirely — app code does nothing"
+            }
+        }
+        switchCustomHandling.isChecked = PushSettings.isCustomHandlingEnabled(this)
+        updateCustomHandlingSubtitle(switchCustomHandling.isChecked)
+        switchCustomHandling.setOnCheckedChangeListener { _, isChecked ->
+            PushSettings.setCustomHandlingEnabled(this, isChecked)
+            updateCustomHandlingSubtitle(isChecked)
+            toast("Push handling mode: ${if (isChecked) "custom" else "Firebase-only"}")
+        }
+
         findViewById<Button>(R.id.btnClear).setOnClickListener {
             Zixflow.instance().clearIdentify()
             toast("clearIdentify()")
@@ -148,6 +166,7 @@ class MainActivity : AppCompatActivity() {
         val deliveryId = intent.getStringExtra(PushActionButtons.EXTRA_DELIVERY_ID)
         val deliveryToken = intent.getStringExtra(PushActionButtons.EXTRA_DELIVERY_TOKEN)
         val deeplink = intent.getStringExtra(CustomFirebaseMessagingService.EXTRA_DEEPLINK)
+        val clickAction = intent.getStringExtra(CustomFirebaseMessagingService.EXTRA_CLICK_ACTION)
 
         if (!deliveryId.isNullOrEmpty() && !deliveryToken.isNullOrEmpty()) {
             Log.i("MainActivity", "Notification BODY tapped (launched/resumed MainActivity)")
@@ -178,7 +197,10 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        if (!deeplink.isNullOrEmpty()) {
+        // click_action takes priority over deeplink_url when both are present — mirrors
+        // the historical Android FCM "which screen" signal, resolved to our own routes since
+        // there's no matching system-level <intent-filter> action string wired for it.
+        if (!DeeplinkRouter.openClickAction(this, clickAction) && !deeplink.isNullOrEmpty()) {
             DeeplinkRouter.open(this, deeplink)
         }
     }
