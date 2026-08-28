@@ -162,6 +162,21 @@ Foreground delivery is a third, pre-existing case: `onMessage` always fires whil
 
 > **iOS silent/background pushes (Case 8, 18):** `@react-native-firebase/messaging`'s background handler wires the native APNs `content-available` hook automatically — no extra native code is required in `ios/ZixflowRNDemo/AppDelegate.swift` for this repo's JS-only setup.
 
+### Custom icon, sound, priority, `click_action`, `analytics_label`, `ttl_seconds` (Android)
+
+`showZixflowNotification()` in `src/pushHandlers.ts` (the custom-handled/foreground path, via `notifee`) supports every one of these fields:
+
+| Field | Behaviour |
+|---|---|
+| `icon` | Notifications always pass `smallIcon: 'ic_notification'` and the manifest declares `default_notification_icon` / `default_notification_color` meta-data — a status-bar icon that isn't a matching bundled drawable renders as a blank icon on the native path, so this app ships a ready-made one instead of relying on a downloaded name. |
+| `sound` | `data.sound` is played from a matching file in `android/app/src/main/res/raw/` (bare name, no extension) — a bundled `notification_tone.wav` is included for testing (`"sound": "notification_tone"`). |
+| `priority` | `data.priority == "normal"` routes the notification to a second, lower-importance channel (`zixflow_normal`, no heads-up banner) instead of the default `zixflow_default` channel. This is a demo convention to make the difference visible — the real FCM `android.priority` header only affects delivery timing and isn't readable by app code. |
+| `click_action` | `data.click_action` (`"OPEN_SALE"` / `"OPEN_DASHBOARD"`) is resolved on tap, taking priority over `deeplink_url` when both are present. This is a custom convention — it's unrelated to FCM's own `android.notification.click_action`, which requires an exact matching `<intent-filter>` action string on the native path or the tap does nothing at all. |
+| `analytics_label` | Logged via `console.log` for visibility during testing — the real `fcm_options.analytics_label` is Firebase Analytics-only and never reaches app code. |
+| `ttl_seconds` | Self-cancels the notification N seconds after it's shown (`setTimeout` + `notifee.cancelNotification`) — a demo-only convenience, distinct from FCM's real `android.ttl` delivery-queue expiry (which has no client-visible effect on a normal online send). |
+
+Send a payload with any combination of these fields in `data` (with the app in the foreground) to see them applied. iOS has no client-visible equivalent for `priority`/`ttl`/`click_action`/`analytics_label` — see the iOS sample's README for what's supported there.
+
 
 
 - Real API keys in `src/config.ts`
