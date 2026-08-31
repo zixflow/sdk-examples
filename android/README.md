@@ -52,6 +52,8 @@ Init enables `ModuleMessagingPushFCM` and `ModuleLocation` when `Config.enableOp
 
 Test cases: [`android-fcm-push-test-cases-v2.md`](../../android-fcm-push-test-cases-v2.md) (13 cases, direct gorush `/api/v1/push` payloads, `platform: 2`).
 
+> **Native vs. Custom payload modes:** a Zixflow campaign can send in **Native** mode (display content in the `notification`/`android.notification` blocks, `data` carries only tracking + routing keys — the OS renders it) or **Custom** mode (no `notification` block; the full content is in `data`, sent as a high-priority data message so this app renders it). High priority is also what lets `onMessageReceived` track `Delivered` while the device is **locked**. See the [payload wire format](../../event-module-docs/10-push-notification-endtoend.md#fcm-android-wire-format) and [Tracking Delivery When the Device Is Locked](../../event-module-docs/10-push-notification-endtoend.md#tracking-delivery-when-the-device-is-locked).
+
 Two distinct handling paths exist in this app — no build flag needed to switch, just the **app's foreground/background state** and whether the payload has a `notification` block:
 
 | Path | When it fires | Code involved | What you'll see |

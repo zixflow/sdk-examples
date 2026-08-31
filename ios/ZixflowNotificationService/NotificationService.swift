@@ -5,6 +5,11 @@ import UserNotifications
 /// `data.image_url`). This is inherently "custom handled" code; there is no way to get
 /// an image with zero app-side code on iOS.
 ///
+/// It is also the only client-side hook that runs the instant a push arrives while the
+/// device is LOCKED or the app is killed — so it doubles as the place to track
+/// `Delivered` on the lock screen (see `trackDelivered`), which the app's own delegate
+/// (`willPresent`/`didReceive`) can't do because those only fire in the foreground or on tap.
+///
 /// Wiring this into the app (Xcode does not let you script a new target safely from
 /// text edits alone — see ios/README.md "Notification Service Extension" section):
 /// 1. Xcode → File → New → Target… → Notification Service Extension.
@@ -27,6 +32,9 @@ final class NotificationService: UNNotificationServiceExtension {
         self.contentHandler = contentHandler
         let content = (request.content.mutableCopy() as? UNMutableNotificationContent) ?? UNMutableNotificationContent()
         bestAttemptContent = content
+
+        // Runs even when the device is locked — the only place iOS lets us record Delivered on arrival.
+        trackDelivered(userInfo: request.content.userInfo)
 
         guard let imageURLString = request.content.userInfo["image_url"] as? String,
               let imageURL = URL(string: imageURLString) else {
@@ -51,6 +59,30 @@ final class NotificationService: UNNotificationServiceExtension {
         }
     }
 
+    /// Fires the `Delivered` metric via the Zixflow tracking HTTP API. The extension is a
+    /// separate target that doesn't link the Zixflow SDK, so it posts directly — using a
+    /// write-only key, never a service-account/admin credential. Set `NSEConfig` below.
+    private func trackDelivered(userInfo: [AnyHashable: Any]) {
+        let deliveryId = userInfo["Zixflow-Delivery-ID"] as? String ?? ""
+        let deliveryToken = userInfo["Zixflow-Delivery-Token"] as? String ?? ""
+        guard !deliveryId.isEmpty, !deliveryToken.isEmpty,
+              !NSEConfig.writeKey.isEmpty,
+              let url = URL(string: NSEConfig.trackEndpoint) else { return }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Basic \(NSEConfig.writeKey)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "event": "Push Notification Delivered",
+            "properties": [
+                "Zixflow-Delivery-ID": deliveryId,
+                "Zixflow-Delivery-Token": deliveryToken,
+            ],
+        ])
+        URLSession.shared.dataTask(with: req).resume()
+    }
+
     private func downloadImage(from url: URL, completion: @escaping (UNNotificationAttachment?) -> Void) {
         let task = URLSession.shared.downloadTask(with: url) { location, _, error in
             guard let location, error == nil else {
@@ -73,4 +105,11 @@ final class NotificationService: UNNotificationServiceExtension {
         }
         task.resume()
     }
+}
+
+/// Fill these in to enable lock-screen Delivered tracking from the extension. Use a
+/// write-only event-ingestion key — the extension must never carry admin credentials.
+private enum NSEConfig {
+    static let trackEndpoint = "https://events.zixflow.in/v1/track"
+    static let writeKey = "" // e.g. base64("YOUR_WRITE_KEY:")
 }

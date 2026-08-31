@@ -134,6 +134,8 @@ See [Push Notification Tracking](https://docs.zixflow.com/documentation/sdk/flut
 
 Test cases: [`android-fcm-push-test-cases-v2.md`](../../android-fcm-push-test-cases-v2.md) (13 Android cases) · [`ios-push-test-cases-v2.md`](../../ios-push-test-cases-v2.md) (19 iOS cases) — direct gorush `/api/v1/push` payloads.
 
+> **Native vs. Custom payload modes:** a Zixflow campaign can send in **Native** mode (display content in the `notification`/`aps.alert` blocks, `data` carries only tracking + routing keys — the OS renders it) or **Custom** mode (no `notification` block; the full content is in `data`, sent as a high-priority data message so this app renders it). High priority is also what lets the background handler track `Delivered` while the device is **locked** on Android; on iOS a Notification Service Extension is required for the same. See the [payload wire format](../../event-module-docs/10-push-notification-endtoend.md#fcm-android-wire-format) and [Tracking Delivery When the Device Is Locked](../../event-module-docs/10-push-notification-endtoend.md#tracking-delivery-when-the-device-is-locked).
+
 `lib/push_handlers.dart` is pure Dart on both platforms (no native Kotlin/Swift push code) and now has two distinct paths, switched purely by **app state** + **payload shape** — no toggle needed:
 
 | Path | When it fires | Code involved | What you'll see |

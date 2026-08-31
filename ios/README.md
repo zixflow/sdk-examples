@@ -85,6 +85,8 @@ Attaching a remote image to a push is **only** possible via a Notification Servi
 4. Build. The extension needs no CocoaPods (uses only `UserNotifications`/`Foundation`).
 5. Send Case 7's payload (`mutable_content: true` + `data.image_url` = a reachable HTTPS image) — background the app first — long-press/expand the notification to see the image.
 
+**The extension also tracks `Delivered` on the lock screen.** `NotificationService.didReceive` runs the instant a push arrives — even when the device is locked or the app is killed — which is the only client-side hook iOS provides for that state (`willPresent`/`didReceive` in `AppDelegate` only fire in the foreground or on tap). `trackDelivered(...)` posts the `Delivered` event directly to the Zixflow tracking API from the extension. Set `NSEConfig.writeKey` in `NotificationService.swift` to a **write-only** event-ingestion key (never a service-account/admin credential); it's left blank by default, which disables the call. See [Tracking Delivery When the Device Is Locked](../../event-module-docs/10-push-notification-endtoend.md#tracking-delivery-when-the-device-is-locked) for the full rationale.
+
 ### Custom sound, `click_action`, `priority`, `analytics_label`, `ttl` (custom-handled fields)
 
 iOS is fundamentally different from Android/Flutter/RN here: almost all of these are either **server-side APNs headers/payload keys with no client-visible effect**, or require **manual Xcode project changes** that can't be safely scripted (no `pbxproj` editing). What's implemented in this sample, and what isn't possible at all:
