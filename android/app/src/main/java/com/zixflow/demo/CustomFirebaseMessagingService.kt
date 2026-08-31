@@ -8,6 +8,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -46,11 +48,43 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         private const val TAG = "CustomFCMService"
         private const val CHANNEL_ID = "zixflow_default"
         private const val CHANNEL_NAME = "Zixflow Notifications"
+        // Selected when data["priority"] == "normal" — lower importance, no heads-up banner,
+        // making FCM's high/normal priority distinction (otherwise only a delivery-timing
+        // hint) observable in the custom-handled path.
+        private const val CHANNEL_ID_NORMAL = "zixflow_normal"
+        private const val CHANNEL_NAME_NORMAL = "Zixflow Notifications (normal priority)"
         const val EXTRA_DEEPLINK = "deeplink_url"
+        const val EXTRA_CLICK_ACTION = "click_action"
+
+        private const val PREFS_NAME = "zixflow_demo_prefs"
+        private const val KEY_LAST_REGISTERED_DEVICE_TOKEN = "last_registered_device_token"
+
+        /**
+         * App-level guard: only call registerDeviceToken() when the token has
+         * actually changed since the last time we registered it. onNewToken()
+         * (and other places apps typically call registerDeviceToken from, e.g.
+         * on every app launch) can otherwise fire repeatedly with the exact same
+         * token, spamming a "Device Created or Updated" event each time for no
+         * reason. Persisted in SharedPreferences (not just an in-memory field)
+         * so the check survives the process being killed while backgrounded.
+         */
+        private fun hasDeviceTokenChanged(context: Context, token: String): Boolean {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val lastToken = prefs.getString(KEY_LAST_REGISTERED_DEVICE_TOKEN, null)
+            if (lastToken == token) return false
+            prefs.edit().putString(KEY_LAST_REGISTERED_DEVICE_TOKEN, token).apply()
+            return true
+        }
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
+
+        if (!hasDeviceTokenChanged(applicationContext, token)) {
+            Log.d(TAG, "Device token unchanged since last registration, skipping duplicate registerDeviceToken call")
+            return
+        }
+
         // Try the SDK's own token handling first (unaffected by the push-casing bug).
         try {
             ZixflowFirebaseMessagingService.onNewToken(applicationContext, token)
@@ -68,6 +102,11 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
         logIncomingPush(remoteMessage)
+
+        if (!PushSettings.isCustomHandlingEnabled(applicationContext)) {
+            Log.i(TAG, "Custom handling OFF — Firebase handles this push entirely, app code does nothing")
+            return
+        }
 
         val sdkHandled = try {
             ZixflowFirebaseMessagingService.onMessageReceived(
@@ -91,8 +130,8 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun handlePushManually(remoteMessage: RemoteMessage) {
         val data = remoteMessage.data
-        val title = remoteMessage.notification?.title ?: data["title"] ?: "Notification"
-        val body = remoteMessage.notification?.body ?: data["body"] ?: ""
+        val title = remoteMessage.notification?.title ?: data["title"]
+        val body = remoteMessage.notification?.body ?: data["body"]
 
         // Correct casing first (matches actual dashboard payload); all-caps kept as
         // a defensive fallback in case a future payload variant uses it.
@@ -104,6 +143,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
 
         if (deliveryId.isNotEmpty() && deliveryToken.isNotEmpty()) {
             try {
+                PushTrackLogger.logOutgoingTrack(
+                    "DELIVERED",
+                    "CustomFirebaseMessagingService.handlePushManually",
+                    mapOf(
+                        "Zixflow-Delivery-ID" to deliveryId,
+                        "Zixflow-Delivery-Token" to deliveryToken,
+                        "metric" to Metric.Delivered
+                    )
+                )
                 Zixflow.instance().trackMetric(
                     TrackMetric.Push(
                         metric = Metric.Delivered,
@@ -115,9 +163,25 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to track delivered metric", e)
             }
+        } else {
+            PushTrackLogger.logSkipped(
+                "DELIVERED",
+                "CustomFirebaseMessagingService.handlePushManually",
+                "missing Zixflow-Delivery-ID/Token in payload"
+            )
         }
 
-        showNotification(title, body, data, deliveryId, deliveryToken)
+        // Test Case 12 (android-fcm-push-test-cases-v2.md) / silent data sync pushes:
+        // no `notification` block and no title/body anywhere in `data` means this push
+        // carries no displayable content at all. "Handled by ourselves, no custom UI" —
+        // we still process the data (delivery tracking above already ran) but must NOT
+        // fabricate a visible notification for it.
+        if (title == null && body == null) {
+            Log.i(TAG, "Silent/data-only push (no notification content) — processing data, showing no UI")
+            return
+        }
+
+        showNotification(title ?: "Notification", body ?: "", data, deliveryId, deliveryToken)
     }
 
     private fun showNotification(
@@ -127,7 +191,7 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         deliveryId: String,
         deliveryToken: String
     ) {
-        ensureNotificationChannel()
+        ensureNotificationChannels()
 
         val imageBitmap = downloadBitmap(data["image_url"])
         val largeIconBitmap = downloadBitmap(data["large_icon_url"])
@@ -145,13 +209,22 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         // a tap on the notification body which goes through an Activity PendingIntent).
         val notificationId = System.currentTimeMillis().toInt()
 
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+        // Custom `data.priority` (distinct from FCM's own android.priority header, which the
+        // app never observes directly) picks the channel — this is what makes priority visibly
+        // different in the custom-handled path (normal = no heads-up banner).
+        val priority = data["priority"]
+        val channelId = if (priority == "normal") CHANNEL_ID_NORMAL else CHANNEL_ID
+
+        val builder = NotificationCompat.Builder(this, channelId)
             .setContentTitle(title)
             .setContentText(body)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(getColor(R.color.notification_accent))
             .setAutoCancel(true)
             .setOngoing(sticky)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(
+                if (priority == "normal") NotificationCompat.PRIORITY_DEFAULT else NotificationCompat.PRIORITY_HIGH
+            )
 
         if (largeIconBitmap != null) builder.setLargeIcon(largeIconBitmap)
         if (imageBitmap != null) {
@@ -172,7 +245,8 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         }
 
         val deeplink = data["deeplink_url"]
-        builder.setContentIntent(buildContentPendingIntent(deliveryId, deliveryToken, deeplink))
+        val clickAction = data["click_action"]
+        builder.setContentIntent(buildContentPendingIntent(deliveryId, deliveryToken, deeplink, clickAction))
 
         PushActionButtons.attachFromRawData(
             deliveryId = deliveryId,
@@ -184,19 +258,38 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         )
 
         NotificationManagerCompat.from(this).notify(notificationId, builder.build())
+
+        // ttl_seconds — our own demo interpretation of "how long this notification stays
+        // visible", distinct from FCM's actual server-side delivery-queue TTL (which the app
+        // never observes directly). Not part of the official Zixflow payload schema — opt-in
+        // via `data.ttl_seconds` for testing.
+        val ttlSeconds = data["ttl_seconds"]?.toIntOrNull()
+        if (ttlSeconds != null && ttlSeconds > 0) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                NotificationManagerCompat.from(this).cancel(notificationId)
+                Log.i(TAG, "Notification $notificationId auto-cancelled after ttl_seconds=$ttlSeconds")
+            }, ttlSeconds * 1000L)
+        }
+
+        val analyticsLabel = data["analytics_label"]
+        if (priority != null || analyticsLabel != null) {
+            Log.i(TAG, "Diagnostics — priority: ${priority ?: "(unset)"}, analytics_label: ${analyticsLabel ?: "(unset)"}")
+        }
     }
 
-    /** Opens [MainActivity], which tracks the Opened metric and the deeplink on launch. */
+    /** Opens [MainActivity], which tracks the Opened metric and resolves click_action/deeplink on launch. */
     private fun buildContentPendingIntent(
         deliveryId: String,
         deliveryToken: String,
-        deeplink: String?
+        deeplink: String?,
+        clickAction: String? = null
     ): PendingIntent {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(PushActionButtons.EXTRA_DELIVERY_ID, deliveryId)
             putExtra(PushActionButtons.EXTRA_DELIVERY_TOKEN, deliveryToken)
             putExtra(EXTRA_DEEPLINK, deeplink)
+            putExtra(EXTRA_CLICK_ACTION, clickAction)
         }
         return PendingIntent.getActivity(
             this,
@@ -206,7 +299,7 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         )
     }
 
-    private fun ensureNotificationChannel() {
+    private fun ensureNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
             if (manager.getNotificationChannel(CHANNEL_ID) == null) {
@@ -216,6 +309,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
                         CHANNEL_NAME,
                         NotificationManager.IMPORTANCE_HIGH
                     ).apply { description = "Zixflow push notifications" }
+                )
+            }
+            if (manager.getNotificationChannel(CHANNEL_ID_NORMAL) == null) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID_NORMAL,
+                        CHANNEL_NAME_NORMAL,
+                        NotificationManager.IMPORTANCE_DEFAULT
+                    ).apply { description = "Zixflow push notifications (data.priority = normal)" }
                 )
             }
         }

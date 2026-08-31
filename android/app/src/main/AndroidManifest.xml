@@ -15,6 +15,13 @@
         android:roundIcon="@drawable/ic_launcher_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.ZixflowSdkExample">
+        <!-- Applied whenever a push doesn't set android:notification.icon/color explicitly. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -25,6 +32,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Demo screens opened via zixflowdemo://sale and zixflowdemo://dashboard
+             push notification deeplinks (see DeeplinkRouter). -->
+        <activity
+            android:name=".SaleActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ZixflowSdkExample" />
+        <activity
+            android:name=".DashboardActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ZixflowSdkExample" />
 
         <receiver
             android:name=".NotificationActionReceiver"

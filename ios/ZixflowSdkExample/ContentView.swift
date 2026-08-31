@@ -5,6 +5,7 @@ import ZixflowDataPipelines
 struct ContentView: View {
     @State private var status = "Ready"
     @State private var deviceToken: String?
+    @State private var customHandlingEnabled = PushSettings.isCustomHandlingEnabled
 
     private let tokenPollTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -19,6 +20,21 @@ struct ContentView: View {
                     Text(status)
                         .font(.footnote)
                         .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Toggle("Custom handling", isOn: $customHandlingEnabled)
+                            .onChange(of: customHandlingEnabled) { newValue in
+                                PushSettings.isCustomHandlingEnabled = newValue
+                                status = "Push handling mode: \(newValue ? "custom" : "APNs-only")"
+                            }
+                        Text(
+                            customHandlingEnabled
+                                ? "App code processes data + shows notifications"
+                                : "APNs handles pushes entirely — app code does nothing"
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Device Token")
@@ -119,6 +135,26 @@ struct ContentView: View {
                         action("Reset") {
                             Zixflow.shared.reset()
                             status = "reset()"
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Navigation (manual test)")
+                            .font(.headline)
+                            .padding(.top, 8)
+                        Text(
+                            "These mirror the in-app screens opened automatically when a push "
+                            + "notification's deeplink is zixflowdemo://sale or "
+                            + "zixflowdemo://dashboard (body tap or action button)."
+                        )
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+
+                        action("Open Sale screen") {
+                            NavigationRouter.shared.activeScreen = .sale
+                        }
+                        action("Open Dashboard screen") {
+                            NavigationRouter.shared.activeScreen = .dashboard
                         }
                     }
                 }

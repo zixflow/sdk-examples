@@ -1,8 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/opt/homebrew/share/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/zixflow/Engage/documentations/sdk-examples/flutter"
-export "FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=/Users/zixflow/Engage/documentations/sdk-examples/flutter/ios/Flutter/ephemeral/Packages/.packages/FlutterFramework"
+export "FLUTTER_ROOT=/Users/soundwave2847/studioProjects/flutter"
+export "FLUTTER_APPLICATION_PATH=/Users/soundwave2847/StudioProjects/zixflow-pr/sdk-examples/flutter"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"

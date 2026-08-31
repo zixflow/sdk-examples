@@ -1,29 +1,103 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 56;
 	objects = {
+
+/* Begin PBXBuildFile section */
 		189B3919216049F3A62884B1 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 075C432F862B403BAE2B9AAA /* AppDelegate.swift */; };
+		23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */; };
 		4536F6450A2346D3BA36E567 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6157A3AA446D46DEBE376BF9 /* Config.swift */; };
 		BE14C9771FF14B178B322081 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EACA5AFFDDE4D3682C6531B /* ContentView.swift */; };
-		23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */; };
-		81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZixflowSdkExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CF61E272F36059EC08D8C0AA /* Pods_ZixflowSdkExample.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2349E82EA5642713E713086D /* Pods_ZixflowSdkExample.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
 		075C432F862B403BAE2B9AAA /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		6157A3AA446D46DEBE376BF9 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		2349E82EA5642713E713086D /* Pods_ZixflowSdkExample.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_ZixflowSdkExample.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		2EACA5AFFDDE4D3682C6531B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZixflowSdkExampleApp.swift; sourceTree = "<group>"; };
 		56BBA84DD69D4719B358BCC7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */ = {isa = PBXGroup; children = (075C432F862B403BAE2B9AAA /* AppDelegate.swift */, 6157A3AA446D46DEBE376BF9 /* Config.swift */, 2EACA5AFFDDE4D3682C6531B /* ContentView.swift */, C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */, 56BBA84DD69D4719B358BCC7 /* Info.plist */,); path = ZixflowSdkExample; sourceTree = "<group>"; };
-		672F14B884E94EE4801E9E76 /* Products */ = {isa = PBXGroup; children = (81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */,); name = Products; sourceTree = "<group>"; };
-		C4643D7FA6D14630BFA3DC63 = {isa = PBXGroup; children = (F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */, 672F14B884E94EE4801E9E76 /* Products */,); sourceTree = "<group>"; };
+		6157A3AA446D46DEBE376BF9 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		693E506AD3FFCAE91038D430 /* Pods-ZixflowSdkExample.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ZixflowSdkExample.debug.xcconfig"; path = "Target Support Files/Pods-ZixflowSdkExample/Pods-ZixflowSdkExample.debug.xcconfig"; sourceTree = "<group>"; };
+		81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZixflowSdkExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZixflowSdkExampleApp.swift; sourceTree = "<group>"; };
+		F35380D1B0D3D53B3C41FDED /* Pods-ZixflowSdkExample.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-ZixflowSdkExample.release.xcconfig"; path = "Target Support Files/Pods-ZixflowSdkExample/Pods-ZixflowSdkExample.release.xcconfig"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		48C3318A682940A9A0225B7A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CF61E272F36059EC08D8C0AA /* Pods_ZixflowSdkExample.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5E378A20E67F1883D088E577 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2349E82EA5642713E713086D /* Pods_ZixflowSdkExample.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		672F14B884E94EE4801E9E76 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C4643D7FA6D14630BFA3DC63 = {
+			isa = PBXGroup;
+			children = (
+				F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */,
+				672F14B884E94EE4801E9E76 /* Products */,
+				FC026F65CF54D1051A807ED7 /* Pods */,
+				5E378A20E67F1883D088E577 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		F43E097BD2D248DFBB8597C5 /* ZixflowSdkExample */ = {
+			isa = PBXGroup;
+			children = (
+				075C432F862B403BAE2B9AAA /* AppDelegate.swift */,
+				6157A3AA446D46DEBE376BF9 /* Config.swift */,
+				2EACA5AFFDDE4D3682C6531B /* ContentView.swift */,
+				C196F407696E47CC8CA55C6D /* ZixflowSdkExampleApp.swift */,
+				56BBA84DD69D4719B358BCC7 /* Info.plist */,
+			);
+			path = ZixflowSdkExample;
+			sourceTree = "<group>";
+		};
+		FC026F65CF54D1051A807ED7 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				693E506AD3FFCAE91038D430 /* Pods-ZixflowSdkExample.debug.xcconfig */,
+				F35380D1B0D3D53B3C41FDED /* Pods-ZixflowSdkExample.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
 		7FA2D1382C2C4023992D8869 /* ZixflowSdkExample */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 157CBBBCC4B145D59CC14EBF /* Build configuration list for PBXNativeTarget "ZixflowSdkExample" */;
 			buildPhases = (
+				29D87FC95E002657B7EE1306 /* [CP] Check Pods Manifest.lock */,
 				E6B161A269E94542BC43864B /* Sources */,
 				48C3318A682940A9A0225B7A /* Frameworks */,
 				F960C88F30DB40A8A830222B /* Resources */,
+				CB054AF5DA74096D8BBCC033 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -34,6 +108,9 @@
 			productReference = 81F35317F22A4E80AEE18D0D /* ZixflowSdkExample.app */;
 			productType = "com.apple.product-type.application";
 		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
 		E46B21C59C574CEF90B2B4D6 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
@@ -57,58 +134,168 @@
 				7FA2D1382C2C4023992D8869 /* ZixflowSdkExample */,
 			);
 		};
-		E6B161A269E94542BC43864B /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (189B3919216049F3A62884B1 /* AppDelegate.swift in Sources */, 4536F6450A2346D3BA36E567 /* Config.swift in Sources */, BE14C9771FF14B178B322081 /* ContentView.swift in Sources */, 23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */,); runOnlyForDeploymentPostprocessing = 0; };
-		48C3318A682940A9A0225B7A /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		F960C88F30DB40A8A830222B /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		DA8188D06633483481C911EE /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F960C88F30DB40A8A830222B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		29D87FC95E002657B7EE1306 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-ZixflowSdkExample-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		CB054AF5DA74096D8BBCC033 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ZixflowSdkExample/Pods-ZixflowSdkExample-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-ZixflowSdkExample/Pods-ZixflowSdkExample-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-ZixflowSdkExample/Pods-ZixflowSdkExample-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E6B161A269E94542BC43864B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				189B3919216049F3A62884B1 /* AppDelegate.swift in Sources */,
+				4536F6450A2346D3BA36E567 /* Config.swift in Sources */,
+				BE14C9771FF14B178B322081 /* ContentView.swift in Sources */,
+				23C66DCBAFBF469E8C1426ED /* ZixflowSdkExampleApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		14C812B62651410381DF77E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 693E506AD3FFCAE91038D430 /* Pods-ZixflowSdkExample.debug.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ZixflowSdkExample/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.zixflow.demo;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		260EA9A6334C488883F2449A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		DA8188D06633483481C911EE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-			}; name = Debug; };
-		260EA9A6334C488883F2449A /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				SWIFT_COMPILATION_MODE = wholemodule;
-			}; name = Release; };
-		14C812B62651410381DF77E9 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {
+			};
+			name = Debug;
+		};
+		E395FB02C650463ABE9A6046 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F35380D1B0D3D53B3C41FDED /* Pods-ZixflowSdkExample.release.xcconfig */;
+			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ZixflowSdkExample/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.zixflow.demo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			}; name = Debug; };
-		E395FB02C650463ABE9A6046 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ZixflowSdkExample/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.zixflow.demo;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			}; name = Release; };
-		F0B0D6F062E2467A8F84F9E0 /* Build configuration list for PBXProject "ZixflowSdkExample" */ = {isa = XCConfigurationList; buildConfigurations = (DA8188D06633483481C911EE /* Debug */, 260EA9A6334C488883F2449A /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		157CBBBCC4B145D59CC14EBF /* Build configuration list for PBXNativeTarget "ZixflowSdkExample" */ = {isa = XCConfigurationList; buildConfigurations = (14C812B62651410381DF77E9 /* Debug */, E395FB02C650463ABE9A6046 /* Release */,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		157CBBBCC4B145D59CC14EBF /* Build configuration list for PBXNativeTarget "ZixflowSdkExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14C812B62651410381DF77E9 /* Debug */,
+				E395FB02C650463ABE9A6046 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0B0D6F062E2467A8F84F9E0 /* Build configuration list for PBXProject "ZixflowSdkExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA8188D06633483481C911EE /* Debug */,
+				260EA9A6334C488883F2449A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
 	};
 	rootObject = E46B21C59C574CEF90B2B4D6 /* Project object */;
 }

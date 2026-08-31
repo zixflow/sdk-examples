@@ -4,7 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:zixflow/zixflow.dart';
 
 import 'config.dart';
+import 'navigation.dart';
 import 'push_handlers.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/sale_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +39,7 @@ Future<void> main() async {
 
   final config = ZixflowConfig(
     apiKey: AppConfig.zixflowApiKey,
+    apiHost: AppConfig.zixflowApiHost,
     logLevel: LogLevel.debug,
     locationConfig: AppConfig.enableLocation
         ? LocationConfig(trackingMode: LocationTrackingMode.manual)
@@ -58,11 +62,16 @@ class ZixflowDemoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Zixflow Flutter Demo',
+      navigatorKey: navigatorKey,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0F766E)),
         useMaterial3: true,
       ),
       home: const DemoHomePage(),
+      routes: {
+        saleRoute: (_) => const SaleScreen(),
+        dashboardRoute: (_) => const DashboardScreen(),
+      },
     );
   }
 }
@@ -158,6 +167,16 @@ class _DemoHomePageState extends State<DemoHomePage> {
     _setStatus('FCM token copied to clipboard');
   }
 
+  void _openSaleScreen() {
+    navigatorKey.currentState?.pushNamed(saleRoute);
+    _setStatus('Navigated to Sale screen (manual test)');
+  }
+
+  void _openDashboardScreen() {
+    navigatorKey.currentState?.pushNamed(dashboardRoute);
+    _setStatus('Navigated to Dashboard screen (manual test)');
+  }
+
   @override
   Widget build(BuildContext context) {
     final actions = <({String label, VoidCallback onPressed})>[
@@ -169,6 +188,11 @@ class _DemoHomePageState extends State<DemoHomePage> {
       (label: 'Clear Identify', onPressed: _clearIdentify),
       (label: 'Register Device Token (demo)', onPressed: _registerDeviceToken),
       (label: 'Delete Device Token', onPressed: _deleteDeviceToken),
+      (label: 'Open Sale Screen (manual test)', onPressed: _openSaleScreen),
+      (
+        label: 'Open Dashboard Screen (manual test)',
+        onPressed: _openDashboardScreen
+      ),
     ];
 
     return Scaffold(
@@ -197,6 +221,31 @@ class _DemoHomePageState extends State<DemoHomePage> {
           if (AppConfig.enablePush)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: PushHandlers.customHandlingEnabled,
+                builder: (context, customHandlingEnabled, _) {
+                  return SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Custom handling'),
+                    subtitle: Text(
+                      customHandlingEnabled
+                          ? 'App code processes data + shows notifications'
+                          : 'Firebase/APNs handles pushes entirely — app code does nothing',
+                    ),
+                    value: customHandlingEnabled,
+                    onChanged: (value) {
+                      PushHandlers.setCustomHandlingEnabled(value);
+                      _setStatus(
+                        'Push handling mode: ${value ? 'custom' : 'Firebase/APNs-only'}',
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          if (AppConfig.enablePush)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
               child: ValueListenableBuilder<String?>(
                 valueListenable: PushHandlers.fcmToken,
                 builder: (context, token, _) {

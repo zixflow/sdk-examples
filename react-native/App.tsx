@@ -3,20 +3,30 @@ import {
   Clipboard,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Zixflow,
   ZixflowPushPermissionStatus,
 } from 'zixflow-reactnative';
 
 import { ActionButton } from './src/components/ActionButton';
+import { DashboardScreen } from './src/components/DashboardScreen';
+import { SaleScreen } from './src/components/SaleScreen';
 import {
   buildZixflowConfig,
   isApiKeyConfigured,
 } from './src/config';
+import {
+  getCurrentScreen,
+  navigate,
+  subscribe,
+  type ScreenName,
+} from './src/navigation';
 import {
   parseActionButtons,
   trackActionClick,
@@ -26,6 +36,13 @@ import { PushHandlers } from './src/pushHandlers';
 const DEMO_USER_ID = 'user-123';
 const DEMO_TOKEN_PLACEHOLDER = 'paste-fcm-or-apns-token-here';
 
+// App-level guard: only call registerDeviceToken() when the token has
+// actually changed since the last time we registered it — persisted via
+// AsyncStorage (not just an in-memory variable) so the check survives the
+// app process being killed while backgrounded, then relaunched.
+const LAST_REGISTERED_DEVICE_TOKEN_KEY =
+  'zixflow_demo_last_registered_device_token';
+
 // Exported helpers used when action-button payloads reach JS (iOS / local notifs).
 export { parseActionButtons, trackActionClick };
 
@@ -34,6 +51,10 @@ export default function App() {
   const [initialized, setInitialized] = useState(false);
   const [deviceTokenInput, setDeviceTokenInput] = useState('');
   const [fcmToken, setFcmToken] = useState<string | undefined>(undefined);
+  const [customHandlingEnabled, setCustomHandlingEnabled] = useState(true);
+  const [screen, setScreen] = useState<ScreenName>(getCurrentScreen());
+
+  useEffect(() => subscribe(setScreen), []);
 
   const appendLog = useCallback((message: string) => {
     const stamp = new Date().toLocaleTimeString();
@@ -58,6 +79,7 @@ export default function App() {
         appendLog('Zixflow SDK initialized');
         await PushHandlers.initialize();
         setFcmToken(PushHandlers.fcmToken);
+        setCustomHandlingEnabled(await PushHandlers.isCustomHandlingEnabled());
         appendLog(
           'Push handling initialized (pure JS: @react-native-firebase/messaging + notifee). Action buttons: iOS ZX_2BTN in AppDelegate.',
         );
@@ -201,7 +223,19 @@ export default function App() {
           'No token available. Request permission first (and ensure google-services.json is installed), or paste a token.',
         );
       }
+
+      const lastToken = await AsyncStorage.getItem(
+        LAST_REGISTERED_DEVICE_TOKEN_KEY,
+      );
+      if (lastToken === token) {
+        appendLog(
+          'Device token unchanged since last registration, skipping duplicate registerDeviceToken call',
+        );
+        return;
+      }
+
       await Zixflow.registerDeviceToken(token);
+      await AsyncStorage.setItem(LAST_REGISTERED_DEVICE_TOKEN_KEY, token);
       appendLog(`Registered token with SDK: ${truncate(token)}`);
     });
 
@@ -215,6 +249,13 @@ export default function App() {
     : initialized
       ? 'SDK initialized — tap buttons to send events'
       : 'Initializing SDK…';
+
+  if (screen === 'sale') {
+    return <SaleScreen onBack={() => navigate('home')} />;
+  }
+  if (screen === 'dashboard') {
+    return <DashboardScreen onBack={() => navigate('home')} />;
+  }
 
   return (
     <ScrollView
@@ -258,6 +299,25 @@ export default function App() {
           </Text>
         </View>
       ) : null}
+
+      <View style={styles.tokenBox}>
+        <View style={styles.tokenHeaderRow}>
+          <Text style={styles.statusLabel}>Custom handling</Text>
+          <Switch
+            value={customHandlingEnabled}
+            onValueChange={async (value) => {
+              setCustomHandlingEnabled(value);
+              await PushHandlers.setCustomHandlingEnabled(value);
+              appendLog(`Push handling mode: ${value ? 'custom' : 'Firebase/APNs-only'}`);
+            }}
+          />
+        </View>
+        <Text style={styles.statusNote}>
+          {customHandlingEnabled
+            ? 'App code processes data + shows notifications'
+            : 'Firebase/APNs handles pushes entirely — app code does nothing'}
+        </Text>
+      </View>
 
       <Section title="Core">
         <View style={styles.grid}>
@@ -333,6 +393,24 @@ export default function App() {
           and zixflow_location_enabled=true (Android). Request OS permission in
           your app before calling location APIs.
         </Text>
+      </Section>
+
+      <Section title="Navigation (manual test)">
+        <Text style={styles.hint}>
+          These mirror the in-app screens opened automatically when a push
+          notification's deeplink is `zixflowdemo://sale` or
+          `zixflowdemo://dashboard` (body tap or action button).
+        </Text>
+        <View style={styles.grid}>
+          <ActionButton
+            label="Open Sale screen"
+            onPress={() => navigate('sale')}
+          />
+          <ActionButton
+            label="Open Dashboard screen"
+            onPress={() => navigate('dashboard')}
+          />
+        </View>
       </Section>
 
       <Section title="Log">

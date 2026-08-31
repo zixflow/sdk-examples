@@ -21,3 +21,22 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// TEMPORARY (debug testing only): consume the locally-built, locally-fixed
+// zixflow-android SDK instead of the published `1.1.3` artifact from
+// mavenCentral, so this sample app can verify SDK source changes before they
+// are published. mavenLocal() must come before mavenCentral() so a "local"
+// version, which only exists locally, doesn't get shadowed.
+// Remove this block (and the ext.sdkVersionAndroid override below) once
+// testing against a real published SDK version again.
+allprojects {
+    repositories {
+        mavenLocal()
+    }
+}
+
+// `zixflow-reactnative`'s build.gradle reads this via
+// rootProject.ext.has('sdkVersionAndroid') BEFORE falling back to its own
+// gradle.properties default of "1.1.3" — setting it here on rootProject.ext
+// (this file IS the root project's build script) takes priority.
+ext.sdkVersionAndroid = "local"

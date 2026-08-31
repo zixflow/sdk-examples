@@ -3,7 +3,6 @@ package com.zixflow.demo
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.zixflow.sdk.Zixflow
@@ -31,6 +30,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
 
         try {
             // Always fire opened first
+            PushTrackLogger.logOutgoingTrack(
+                "OPENED",
+                "NotificationActionReceiver (action button press)",
+                mapOf(
+                    "Zixflow-Delivery-ID" to deliveryId,
+                    "Zixflow-Delivery-Token" to deliveryToken,
+                    "metric" to Metric.Opened
+                )
+            )
             Zixflow.instance().trackMetric(
                 TrackMetric.Push(
                     metric = Metric.Opened,
@@ -39,15 +47,21 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 )
             )
 
+            val clickProperties = mapOf(
+                "Zixflow-Delivery-ID" to deliveryId,
+                "Zixflow-Delivery-Token" to deliveryToken,
+                "action_index" to actionIndex,
+                "action_name" to actionName,
+                "action_deeplink" to actionDeeplink
+            )
+            PushTrackLogger.logOutgoingTrack(
+                "CLICKED (action button)",
+                "NotificationActionReceiver",
+                mapOf("event" to "Push Notification Action Clicked", "properties" to clickProperties)
+            )
             Zixflow.instance().track(
                 name = "Push Notification Action Clicked",
-                properties = mapOf(
-                    "Zixflow-Delivery-ID" to deliveryId,
-                    "Zixflow-Delivery-Token" to deliveryToken,
-                    "action_index" to actionIndex,
-                    "action_name" to actionName,
-                    "action_deeplink" to actionDeeplink
-                )
+                properties = clickProperties
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to track push action click", e)
@@ -64,10 +78,7 @@ class NotificationActionReceiver : BroadcastReceiver() {
         }
 
         if (actionDeeplink.isNotEmpty()) {
-            val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(actionDeeplink)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(viewIntent)
+            DeeplinkRouter.open(context, actionDeeplink)
         }
     }
 

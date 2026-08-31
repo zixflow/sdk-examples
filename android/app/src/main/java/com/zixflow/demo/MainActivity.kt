@@ -4,14 +4,15 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.zixflow.sdk.Zixflow
 import com.zixflow.sdk.events.Metric
 import com.zixflow.sdk.events.TrackMetric
@@ -115,9 +116,34 @@ class MainActivity : AppCompatActivity() {
             toast("deleteDeviceToken called")
         }
 
+        val switchCustomHandling = findViewById<SwitchMaterial>(R.id.switchCustomHandling)
+        val switchCustomHandlingSubtitle = findViewById<TextView>(R.id.switchCustomHandlingSubtitle)
+        fun updateCustomHandlingSubtitle(enabled: Boolean) {
+            switchCustomHandlingSubtitle.text = if (enabled) {
+                "App code processes data + shows notifications"
+            } else {
+                "Firebase handles pushes entirely — app code does nothing"
+            }
+        }
+        switchCustomHandling.isChecked = PushSettings.isCustomHandlingEnabled(this)
+        updateCustomHandlingSubtitle(switchCustomHandling.isChecked)
+        switchCustomHandling.setOnCheckedChangeListener { _, isChecked ->
+            PushSettings.setCustomHandlingEnabled(this, isChecked)
+            updateCustomHandlingSubtitle(isChecked)
+            toast("Push handling mode: ${if (isChecked) "custom" else "Firebase-only"}")
+        }
+
         findViewById<Button>(R.id.btnClear).setOnClickListener {
             Zixflow.instance().clearIdentify()
             toast("clearIdentify()")
+        }
+
+        findViewById<Button>(R.id.btnOpenSale).setOnClickListener {
+            startActivity(Intent(this, SaleActivity::class.java))
+        }
+
+        findViewById<Button>(R.id.btnOpenDashboard).setOnClickListener {
+            startActivity(Intent(this, DashboardActivity::class.java))
         }
 
         startTokenPolling()
@@ -140,8 +166,19 @@ class MainActivity : AppCompatActivity() {
         val deliveryId = intent.getStringExtra(PushActionButtons.EXTRA_DELIVERY_ID)
         val deliveryToken = intent.getStringExtra(PushActionButtons.EXTRA_DELIVERY_TOKEN)
         val deeplink = intent.getStringExtra(CustomFirebaseMessagingService.EXTRA_DEEPLINK)
+        val clickAction = intent.getStringExtra(CustomFirebaseMessagingService.EXTRA_CLICK_ACTION)
 
         if (!deliveryId.isNullOrEmpty() && !deliveryToken.isNullOrEmpty()) {
+            Log.i("MainActivity", "Notification BODY tapped (launched/resumed MainActivity)")
+            PushTrackLogger.logOutgoingTrack(
+                "OPENED",
+                "MainActivity.handlePushOpenIntent (body tap)",
+                mapOf(
+                    "Zixflow-Delivery-ID" to deliveryId,
+                    "Zixflow-Delivery-Token" to deliveryToken,
+                    "metric" to Metric.Opened
+                )
+            )
             try {
                 Zixflow.instance().trackMetric(
                     TrackMetric.Push(
@@ -152,13 +189,19 @@ class MainActivity : AppCompatActivity() {
                 )
             } catch (_: Exception) {
             }
+        } else {
+            PushTrackLogger.logSkipped(
+                "OPENED",
+                "MainActivity.handlePushOpenIntent (body tap)",
+                "missing Zixflow-Delivery-ID/Token in intent extras"
+            )
         }
 
-        if (!deeplink.isNullOrEmpty()) {
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(deeplink)))
-            } catch (_: Exception) {
-            }
+        // click_action takes priority over deeplink_url when both are present — mirrors
+        // the historical Android FCM "which screen" signal, resolved to our own routes since
+        // there's no matching system-level <intent-filter> action string wired for it.
+        if (!DeeplinkRouter.openClickAction(this, clickAction) && !deeplink.isNullOrEmpty()) {
+            DeeplinkRouter.open(this, deeplink)
         }
     }
 
