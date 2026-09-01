@@ -38,6 +38,13 @@ const ANDROID_CHANNEL_NAME = 'Zixflow Notifications';
 // delivery timing, not anything visible — this channel makes the difference observable
 // in the custom-handled path).
 const ANDROID_CHANNEL_ID_NORMAL = 'zixflow_normal';
+// A second, template-specific channel used only when data.template_id matches
+// TEMPLATE_ORDER_SHIPPED_V2 below — demonstrates giving one dashboard template its own
+// bespoke look regardless of which content fields the campaign happened to send.
+const ANDROID_CHANNEL_ID_ORDER_UPDATES = 'zixflow_order_updates';
+// Dashboard "Template ID" (Push Notifications → Templates list) for the demo
+// "Order Shipped v2" template — swap in your own template's ID to try this.
+const TEMPLATE_ORDER_SHIPPED_V2 = '949196';
 // Bundled at android/app/src/main/res/raw/notification_tone.wav — reference it in a
 // test payload as `"sound": "notification_tone"` to hear a real custom sound (a synthesized
 // two-tone chime, not a licensed asset, safe to ship in this demo).
@@ -180,6 +187,15 @@ async function showNotification(
     message.notification?.title ?? titleFromData ?? 'Notification';
   const body = message.notification?.body ?? bodyFromData ?? '';
 
+  // template_id — the dashboard-assigned ID of the template used to send this push
+  // (Push Notifications → Templates list). Lets the app recognize a specific template
+  // and give it a bespoke renderer instead of the generic field-driven one below.
+  const templateId = getStringField(data, 'template_id');
+  if (templateId === TEMPLATE_ORDER_SHIPPED_V2) {
+    await showOrderShippedNotification(data, title, body);
+    return;
+  }
+
   const soundName =
     soundFromData && soundFromData !== 'default' && soundFromData !== 'none'
       ? soundFromData
@@ -268,6 +284,37 @@ async function showNotification(
       `[PushHandlers] Diagnostics — ttl(server): ${ttl}, priority: ${priorityFromData ?? '(unset)'}, analytics_label: ${analyticsLabel ?? '(unset)'}`,
     );
   }
+}
+
+/**
+ * Bespoke renderer for the "Order Shipped v2" dashboard template (see
+ * TEMPLATE_ORDER_SHIPPED_V2) — a template-specific channel/icon, built independent of
+ * whatever generic fields (icon/color/sticky/etc.) the campaign sent. Registering more
+ * templates is just adding more branches in `showNotification` plus one function like
+ * this per template.
+ */
+async function showOrderShippedNotification(
+  data: NotificationData,
+  title: string,
+  body: string,
+) {
+  const notificationId = await notifee.displayNotification({
+    title: `📦 ${title}`,
+    body,
+    data,
+    android: {
+      channelId: ANDROID_CHANNEL_ID_ORDER_UPDATES,
+      importance: AndroidImportance.HIGH,
+      smallIcon: 'ic_notification',
+      pressAction: { id: 'default' },
+      actions: buildNotifeeActions(data),
+      autoCancel: true,
+    },
+    ios: { categoryId: 'ZX_2BTN' },
+  });
+  console.log(
+    `[PushHandlers] Rendered template_id=${TEMPLATE_ORDER_SHIPPED_V2} via showOrderShippedNotification (${notificationId})`,
+  );
 }
 
 
@@ -457,6 +504,12 @@ export const PushHandlers = {
         id: ANDROID_CHANNEL_ID_NORMAL,
         name: 'Zixflow Notifications (Normal)',
         importance: AndroidImportance.DEFAULT,
+      });
+      // Used only for the template_id === TEMPLATE_ORDER_SHIPPED_V2 demo renderer.
+      await notifee.createChannel({
+        id: ANDROID_CHANNEL_ID_ORDER_UPDATES,
+        name: 'Order Updates',
+        importance: AndroidImportance.HIGH,
       });
     }
 

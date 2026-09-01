@@ -33,6 +33,14 @@ const String _androidChannelName = 'Zixflow Notifications';
 // hint) observable in the custom-handled path.
 const String _androidChannelIdNormal = 'zixflow_normal';
 const String _androidChannelNameNormal = 'Zixflow Notifications (normal priority)';
+// A second, template-specific channel used only when data['template_id'] matches
+// _templateOrderShippedV2 below — demonstrates giving one dashboard template its own
+// bespoke look regardless of which content fields the campaign happened to send.
+const String _androidChannelIdOrderUpdates = 'zixflow_order_updates';
+const String _androidChannelNameOrderUpdates = 'Order Updates';
+// Dashboard "Template ID" (Push Notifications → Templates list) for the demo
+// "Order Shipped v2" template — swap in your own template's ID to try this.
+const String _templateOrderShippedV2 = '949196';
 
 // Persisted (not just in-memory) so the background isolate — which does NOT
 // share Dart statics with the main isolate — can read the same value the user
@@ -540,6 +548,14 @@ Future<void> _showLocalNotification(
   data['title'] ??= title;
   data['body'] ??= body;
 
+  // template_id — the dashboard-assigned ID of the template used to send this push
+  // (Push Notifications → Templates list). Lets the app recognize a specific template
+  // and give it a bespoke renderer instead of the generic field-driven one below.
+  if (data['template_id']?.toString() == _templateOrderShippedV2) {
+    await _showOrderShippedNotification(plugin, message, data, title, body);
+    return;
+  }
+
   final imageUrl = data['image_url']?.toString();
   final largeIconUrl = data['large_icon_url']?.toString();
   final soundName = data['sound']?.toString();
@@ -661,6 +677,51 @@ Future<void> _showLocalNotification(
       debugPrint('[PushHandlers] Notification $id auto-cancelled after ttl_seconds=$ttlSeconds');
     });
   }
+}
+
+/// Bespoke renderer for the "Order Shipped v2" dashboard template (see
+/// [_templateOrderShippedV2]) — a template-specific channel/icon, built independent of
+/// whatever generic fields (icon/color/sticky/etc.) the campaign sent. Registering more
+/// templates is just adding more `if` branches in [_showLocalNotification] plus one
+/// function like this per template.
+Future<void> _showOrderShippedNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  RemoteMessage message,
+  Map<String, dynamic> data,
+  String title,
+  String body,
+) async {
+  final buttons = parseActionButtons(data['action_buttons']);
+  final androidActions = <AndroidNotificationAction>[
+    for (var i = 0; i < buttons.length && i < 2; i++)
+      AndroidNotificationAction(
+        'ACTION_$i',
+        buttons[i]['name']?.toString() ?? 'Action ${i + 1}',
+        showsUserInterface: true,
+      ),
+  ];
+
+  await plugin.show(
+    message.hashCode,
+    '📦 $title',
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        _androidChannelIdOrderUpdates,
+        _androidChannelNameOrderUpdates,
+        channelDescription: 'Order status updates (template_id=$_templateOrderShippedV2)',
+        icon: 'ic_notification',
+        color: const Color(0xFFFA2438),
+        importance: Importance.high,
+        priority: Priority.high,
+        actions: androidActions,
+        autoCancel: true,
+      ),
+      iOS: const DarwinNotificationDetails(categoryIdentifier: 'ZX_2BTN'),
+    ),
+    payload: jsonEncode(data),
+  );
+  debugPrint('[PushHandlers] Rendered template_id=$_templateOrderShippedV2 via _showOrderShippedNotification');
 }
 
 /// Opens [deeplink] in-app if it matches one of this demo app's own screens

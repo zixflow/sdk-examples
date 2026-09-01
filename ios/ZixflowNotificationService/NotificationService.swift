@@ -25,6 +25,10 @@ final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttemptContent: UNMutableNotificationContent?
 
+    // Dashboard "Template ID" (Push Notifications → Templates list) for the demo
+    // "Order Shipped v2" template — swap in your own template's ID to try this.
+    private let templateOrderShippedV2 = "949196"
+
     override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
@@ -35,6 +39,15 @@ final class NotificationService: UNNotificationServiceExtension {
 
         // Runs even when the device is locked — the only place iOS lets us record Delivered on arrival.
         trackDelivered(userInfo: request.content.userInfo)
+
+        // template_id — the dashboard-assigned ID of the template used to send this push.
+        // Lets the extension give one specific template a bespoke look (title prefix, a
+        // distinct subtitle here) instead of the generic image-only enrichment below.
+        // Registering more templates is just adding more cases to this switch.
+        if let templateId = request.content.userInfo["template_id"] as? String,
+           templateId == templateOrderShippedV2 {
+            applyOrderShippedTemplate(to: content)
+        }
 
         guard let imageURLString = request.content.userInfo["image_url"] as? String,
               let imageURL = URL(string: imageURLString) else {
@@ -57,6 +70,13 @@ final class NotificationService: UNNotificationServiceExtension {
         if let contentHandler, let bestAttemptContent {
             contentHandler(bestAttemptContent)
         }
+    }
+
+    /// Bespoke enrichment for the "Order Shipped v2" dashboard template — a template-specific
+    /// title prefix/subtitle, built independent of whatever generic content the campaign sent.
+    private func applyOrderShippedTemplate(to content: UNMutableNotificationContent) {
+        content.title = "📦 \(content.title)"
+        content.subtitle = "Order update"
     }
 
     /// Fires the `Delivered` metric via the Zixflow tracking HTTP API. The extension is a

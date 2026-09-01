@@ -179,6 +179,10 @@ Foreground delivery is a third, pre-existing case: `onMessage` always fires whil
 
 Send a payload with any combination of these fields in `data` (with the app in the foreground) to see them applied. iOS has no client-visible equivalent for `priority`/`ttl`/`click_action`/`analytics_label` — see the iOS sample's README for what's supported there.
 
+### Template-based custom rendering (`template_id`)
+
+When a customer creates a notification template in the Zixflow dashboard (Push Notifications → Templates), the template gets a unique **Template ID** (shown in the templates list) that's automatically included as `data.template_id` on every push sent from it. `showNotification()` in `src/pushHandlers.ts` checks `data.template_id` before falling back to the generic renderer above — send a push with `"template_id": "949196"` to see the bundled "Order Shipped v2" demo template (its own `zixflow_order_updates` channel and a 📦 title prefix) render via `showOrderShippedNotification()` instead. See [Template-Based Custom Rendering](../../event-module-docs/10-push-notification-endtoend.md#template-based-custom-rendering-template_id) for the full pattern and per-platform code.
+
 
 
 - Real API keys in `src/config.ts`

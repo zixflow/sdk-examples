@@ -193,8 +193,14 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         // (if Zixflow chooses to send them) for demo parity with Android/Flutter/RN.
         let priority = userInfo["priority"] as? String
         let analyticsLabel = userInfo["analytics_label"] as? String
-        if priority != nil || analyticsLabel != nil {
-            print("[PushHandlers] Diagnostics — priority: \(priority ?? "(unset)"), analytics_label: \(analyticsLabel ?? "(unset)")")
+        // template_id — the dashboard-assigned ID of the template used to send this push
+        // (Push Notifications → Templates list). The bespoke per-template rendering itself
+        // happens in the Notification Service Extension (see NotificationService.swift),
+        // which runs even while the device is locked; here it's diagnostic-only since
+        // `willPresent` only fires in the foreground.
+        let templateId = userInfo["template_id"] as? String
+        if priority != nil || analyticsLabel != nil || templateId != nil {
+            print("[PushHandlers] Diagnostics — priority: \(priority ?? "(unset)"), analytics_label: \(analyticsLabel ?? "(unset)"), template_id: \(templateId ?? "(unset)")")
         }
 
         completionHandler([.banner, .sound, .badge, .list])
