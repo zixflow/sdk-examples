@@ -33,14 +33,15 @@ const String _androidChannelName = 'Zixflow Notifications';
 // hint) observable in the custom-handled path.
 const String _androidChannelIdNormal = 'zixflow_normal';
 const String _androidChannelNameNormal = 'Zixflow Notifications (normal priority)';
-// A second, template-specific channel used only when data['template_id'] matches
-// _templateOrderShippedV2 below — demonstrates giving one dashboard template its own
-// bespoke look regardless of which content fields the campaign happened to send.
-const String _androidChannelIdOrderUpdates = 'zixflow_order_updates';
-const String _androidChannelNameOrderUpdates = 'Order Updates';
-// Dashboard "Template ID" (Push Notifications → Templates list) for the demo
-// "Order Shipped v2" template — swap in your own template's ID to try this.
-const String _templateOrderShippedV2 = '949196';
+// A second, dedicated channel used only when data['template_id'] matches
+// _exampleTemplateId below — demonstrates giving a specific dashboard template its own
+// bespoke renderer, built from every field that template defines, instead of falling
+// back to the generic field-driven renderer below.
+const String _androidChannelIdTemplateExample = 'zixflow_template_example';
+const String _androidChannelNameTemplateExample = 'Template Example';
+// A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+// swap in your own template's ID to try this against a template you control.
+const String _exampleTemplateId = '469935';
 
 // Persisted (not just in-memory) so the background isolate — which does NOT
 // share Dart statics with the main isolate — can read the same value the user
@@ -551,8 +552,8 @@ Future<void> _showLocalNotification(
   // template_id — the dashboard-assigned ID of the template used to send this push
   // (Push Notifications → Templates list). Lets the app recognize a specific template
   // and give it a bespoke renderer instead of the generic field-driven one below.
-  if (data['template_id']?.toString() == _templateOrderShippedV2) {
-    await _showOrderShippedNotification(plugin, message, data, title, body);
+  if (data['template_id']?.toString() == _exampleTemplateId) {
+    await _showTemplateExampleNotification(plugin, message, data, title, body);
     return;
   }
 
@@ -679,18 +680,26 @@ Future<void> _showLocalNotification(
   }
 }
 
-/// Bespoke renderer for the "Order Shipped v2" dashboard template (see
-/// [_templateOrderShippedV2]) — a template-specific channel/icon, built independent of
-/// whatever generic fields (icon/color/sticky/etc.) the campaign sent. Registering more
-/// templates is just adding more `if` branches in [_showLocalNotification] plus one
+/// Example bespoke renderer for one specific dashboard template (see [_exampleTemplateId])
+/// — since a template's fields are known ahead of time (from the dashboard's template
+/// editor), the app can build a fully custom layout using every one of them, rather than
+/// the generic "handle whatever fields happen to be present" renderer above. Registering
+/// more templates is just adding more `if` branches in [_showLocalNotification] plus one
 /// function like this per template.
-Future<void> _showOrderShippedNotification(
+Future<void> _showTemplateExampleNotification(
   FlutterLocalNotificationsPlugin plugin,
   RemoteMessage message,
   Map<String, dynamic> data,
   String title,
   String body,
 ) async {
+  final id = message.hashCode;
+  final imagePath = await _downloadToTempFile(data['image_url']?.toString(), 'template_img_$id.jpg');
+  final largeIconPath = await _downloadToTempFile(data['large_icon_url']?.toString(), 'template_icon_$id.jpg');
+  final soundName = data['sound']?.toString();
+  final badgeCount = int.tryParse(data['badge']?.toString() ?? '');
+  final sticky = data['sticky']?.toString() == 'true';
+
   final buttons = parseActionButtons(data['action_buttons']);
   final androidActions = <AndroidNotificationAction>[
     for (var i = 0; i < buttons.length && i < 2; i++)
@@ -702,26 +711,49 @@ Future<void> _showOrderShippedNotification(
   ];
 
   await plugin.show(
-    message.hashCode,
-    '📦 $title',
+    id,
+    title,
     body,
     NotificationDetails(
       android: AndroidNotificationDetails(
-        _androidChannelIdOrderUpdates,
-        _androidChannelNameOrderUpdates,
-        channelDescription: 'Order status updates (template_id=$_templateOrderShippedV2)',
+        _androidChannelIdTemplateExample,
+        _androidChannelNameTemplateExample,
+        channelDescription: 'Example template-specific renderer (template_id=$_exampleTemplateId)',
         icon: 'ic_notification',
         color: const Color(0xFFFA2438),
         importance: Importance.high,
         priority: Priority.high,
         actions: androidActions,
+        largeIcon: largeIconPath != null ? FilePathAndroidBitmap(largeIconPath) : null,
+        styleInformation: imagePath != null
+            ? BigPictureStyleInformation(FilePathAndroidBitmap(imagePath), contentTitle: title, summaryText: body)
+            : BigTextStyleInformation(body),
+        playSound: soundName != null && soundName != 'default' && soundName != 'none',
+        sound: soundName != null && soundName != 'default' && soundName != 'none'
+            ? RawResourceAndroidNotificationSound(soundName)
+            : null,
+        number: badgeCount,
         autoCancel: true,
+        ongoing: sticky,
       ),
-      iOS: const DarwinNotificationDetails(categoryIdentifier: 'ZX_2BTN'),
+      iOS: DarwinNotificationDetails(
+        categoryIdentifier: 'ZX_2BTN',
+        badgeNumber: badgeCount,
+        attachments: imagePath != null ? [DarwinNotificationAttachment(imagePath)] : null,
+      ),
     ),
     payload: jsonEncode(data),
   );
-  debugPrint('[PushHandlers] Rendered template_id=$_templateOrderShippedV2 via _showOrderShippedNotification');
+
+  final ttlSeconds = int.tryParse(data['ttl_seconds']?.toString() ?? '');
+  if (ttlSeconds != null && ttlSeconds > 0) {
+    Future.delayed(Duration(seconds: ttlSeconds), () => plugin.cancel(id));
+  }
+
+  final analyticsLabel = data['analytics_label']?.toString();
+  if (analyticsLabel != null) {
+    debugPrint('[PushHandlers] Diagnostics — analytics_label: $analyticsLabel (template_id=$_exampleTemplateId)');
+  }
 }
 
 /// Opens [deeplink] in-app if it matches one of this demo app's own screens

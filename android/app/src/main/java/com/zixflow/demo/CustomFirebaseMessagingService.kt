@@ -53,14 +53,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         // hint) observable in the custom-handled path.
         private const val CHANNEL_ID_NORMAL = "zixflow_normal"
         private const val CHANNEL_NAME_NORMAL = "Zixflow Notifications (normal priority)"
-        // A second, template-specific channel used only when data["template_id"] matches
-        // TEMPLATE_ORDER_SHIPPED_V2 below — demonstrates giving one dashboard template its
-        // own bespoke look regardless of which content fields the campaign happened to send.
-        private const val CHANNEL_ID_ORDER_UPDATES = "zixflow_order_updates"
-        private const val CHANNEL_NAME_ORDER_UPDATES = "Order Updates"
-        // Dashboard "Template ID" (Push Notifications → Templates list) for the demo
-        // "Order Shipped v2" template — swap in your own template's ID to try this.
-        private const val TEMPLATE_ORDER_SHIPPED_V2 = "949196"
+        // A second, dedicated channel used only when data["template_id"] matches
+        // EXAMPLE_TEMPLATE_ID below — demonstrates giving a specific dashboard template its
+        // own bespoke renderer, built from every field that template defines, instead of
+        // falling back to the generic field-driven renderer below.
+        private const val CHANNEL_ID_TEMPLATE_EXAMPLE = "zixflow_template_example"
+        private const val CHANNEL_NAME_TEMPLATE_EXAMPLE = "Template Example"
+        // A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+        // swap in your own template's ID to try this against a template you control.
+        private const val EXAMPLE_TEMPLATE_ID = "469935"
         const val EXTRA_DEEPLINK = "deeplink_url"
         const val EXTRA_CLICK_ACTION = "click_action"
 
@@ -205,8 +206,8 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         // (Push Notifications → Templates list). Lets the app recognize a specific template
         // and give it a bespoke renderer instead of the generic field-driven one below.
         when (data["template_id"]) {
-            TEMPLATE_ORDER_SHIPPED_V2 -> {
-                showOrderShippedNotification(title, body, data, deliveryId, deliveryToken)
+            EXAMPLE_TEMPLATE_ID -> {
+                showTemplateExampleNotification(title, body, data, deliveryId, deliveryToken)
                 return
             }
         }
@@ -296,31 +297,56 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     /**
-     * Bespoke renderer for the "Order Shipped v2" dashboard template (see
-     * [TEMPLATE_ORDER_SHIPPED_V2]) — a template-specific channel/icon/action set, built
-     * independent of whatever generic fields (icon/color/sticky/etc.) the campaign sent.
-     * Registering more templates here is just adding more `when` branches in
-     * [showNotification] plus one function like this per template.
+     * Example bespoke renderer for one specific dashboard template (see [EXAMPLE_TEMPLATE_ID])
+     * — since a template's fields are known ahead of time (from the dashboard's template
+     * editor), the app can build a fully custom layout using every one of them, rather than
+     * the generic "handle whatever fields happen to be present" renderer above. Registering
+     * more templates is just adding more `when` branches in [showNotification] plus one
+     * function like this per template.
      */
-    private fun showOrderShippedNotification(
+    private fun showTemplateExampleNotification(
         title: String,
         body: String,
         data: Map<String, String>,
         deliveryId: String,
         deliveryToken: String
     ) {
+        val imageBitmap = downloadBitmap(data["image_url"])
+        val largeIconBitmap = downloadBitmap(data["large_icon_url"])
+        val badgeCount = data["badge"]?.toIntOrNull()
+        val soundName = data["sound"]
+        val sticky = data["sticky"]?.toBooleanStrictOrNull() ?: false
         val notificationId = System.currentTimeMillis().toInt()
-        val builder = NotificationCompat.Builder(this, CHANNEL_ID_ORDER_UPDATES)
-            .setContentTitle("📦 $title")
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID_TEMPLATE_EXAMPLE)
+            .setContentTitle(title)
             .setContentText(body)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(getColor(R.color.notification_accent))
             .setAutoCancel(true)
+            .setOngoing(sticky)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
 
-        val deeplink = data["deeplink_url"]
-        builder.setContentIntent(buildContentPendingIntent(deliveryId, deliveryToken, deeplink, data["click_action"]))
+        if (largeIconBitmap != null) builder.setLargeIcon(largeIconBitmap)
+        builder.setStyle(
+            if (imageBitmap != null) {
+                NotificationCompat.BigPictureStyle()
+                    .bigPicture(imageBitmap)
+                    .bigLargeIcon(null as Bitmap?)
+                    .setBigContentTitle(title)
+                    .setSummaryText(body)
+            } else {
+                NotificationCompat.BigTextStyle().bigText(body)
+            }
+        )
+        if (badgeCount != null) builder.setNumber(badgeCount)
+        if (!soundName.isNullOrEmpty() && soundName != "default" && soundName != "none") {
+            builder.setSound(android.net.Uri.parse("android.resource://$packageName/raw/$soundName"))
+        }
+
+        builder.setContentIntent(
+            buildContentPendingIntent(deliveryId, deliveryToken, data["deeplink_url"], data["click_action"])
+        )
         PushActionButtons.attachFromRawData(
             deliveryId = deliveryId,
             deliveryToken = deliveryToken,
@@ -330,7 +356,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
             context = this
         )
         NotificationManagerCompat.from(this).notify(notificationId, builder.build())
-        Log.i(TAG, "Rendered template_id=$TEMPLATE_ORDER_SHIPPED_V2 via showOrderShippedNotification")
+
+        val ttlSeconds = data["ttl_seconds"]?.toIntOrNull()
+        if (ttlSeconds != null && ttlSeconds > 0) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                NotificationManagerCompat.from(this).cancel(notificationId)
+            }, ttlSeconds * 1000L)
+        }
+
+        data["analytics_label"]?.let { Log.i(TAG, "Diagnostics — analytics_label: $it (template_id=$EXAMPLE_TEMPLATE_ID)") }
     }
 
     /** Opens [MainActivity], which tracks the Opened metric and resolves click_action/deeplink on launch. */
@@ -376,13 +410,13 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
                     ).apply { description = "Zixflow push notifications (data.priority = normal)" }
                 )
             }
-            if (manager.getNotificationChannel(CHANNEL_ID_ORDER_UPDATES) == null) {
+            if (manager.getNotificationChannel(CHANNEL_ID_TEMPLATE_EXAMPLE) == null) {
                 manager.createNotificationChannel(
                     NotificationChannel(
-                        CHANNEL_ID_ORDER_UPDATES,
-                        CHANNEL_NAME_ORDER_UPDATES,
+                        CHANNEL_ID_TEMPLATE_EXAMPLE,
+                        CHANNEL_NAME_TEMPLATE_EXAMPLE,
                         NotificationManager.IMPORTANCE_HIGH
-                    ).apply { description = "Order status updates (template_id=$TEMPLATE_ORDER_SHIPPED_V2)" }
+                    ).apply { description = "Example template-specific renderer (template_id=$EXAMPLE_TEMPLATE_ID)" }
                 )
             }
         }

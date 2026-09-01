@@ -25,9 +25,9 @@ final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttemptContent: UNMutableNotificationContent?
 
-    // Dashboard "Template ID" (Push Notifications → Templates list) for the demo
-    // "Order Shipped v2" template — swap in your own template's ID to try this.
-    private let templateOrderShippedV2 = "949196"
+    // A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+    // swap in your own template's ID to try this against a template you control.
+    private let exampleTemplateId = "469935"
 
     override func didReceive(
         _ request: UNNotificationRequest,
@@ -41,12 +41,13 @@ final class NotificationService: UNNotificationServiceExtension {
         trackDelivered(userInfo: request.content.userInfo)
 
         // template_id — the dashboard-assigned ID of the template used to send this push.
-        // Lets the extension give one specific template a bespoke look (title prefix, a
-        // distinct subtitle here) instead of the generic image-only enrichment below.
-        // Registering more templates is just adding more cases to this switch.
+        // Since a template's fields are known ahead of time (from the dashboard's template
+        // editor), the extension can apply a fully custom treatment using every one of them,
+        // instead of the generic image-only enrichment below. Registering more templates is
+        // just adding more cases to this `if`.
         if let templateId = request.content.userInfo["template_id"] as? String,
-           templateId == templateOrderShippedV2 {
-            applyOrderShippedTemplate(to: content)
+           templateId == exampleTemplateId {
+            applyTemplateExampleCustomization(to: content, userInfo: request.content.userInfo)
         }
 
         guard let imageURLString = request.content.userInfo["image_url"] as? String,
@@ -72,11 +73,14 @@ final class NotificationService: UNNotificationServiceExtension {
         }
     }
 
-    /// Bespoke enrichment for the "Order Shipped v2" dashboard template — a template-specific
-    /// title prefix/subtitle, built independent of whatever generic content the campaign sent.
-    private func applyOrderShippedTemplate(to content: UNMutableNotificationContent) {
-        content.title = "📦 \(content.title)"
-        content.subtitle = "Order update"
+    /// Example customization for one specific dashboard template (see [exampleTemplateId])
+    /// — applies `data.badge` (one of that template's known fields) directly, since iOS's
+    /// `aps.badge` is otherwise set server-side and most of the template's other fields
+    /// (large_icon_url, sticky, action_buttons) have no client-side equivalent on iOS.
+    private func applyTemplateExampleCustomization(to content: UNMutableNotificationContent, userInfo: [AnyHashable: Any]) {
+        if let badgeString = userInfo["badge"] as? String, let badgeValue = Int(badgeString) {
+            content.badge = NSNumber(value: badgeValue)
+        }
     }
 
     /// Fires the `Delivered` metric via the Zixflow tracking HTTP API. The extension is a
