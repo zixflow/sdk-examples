@@ -53,6 +53,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         // hint) observable in the custom-handled path.
         private const val CHANNEL_ID_NORMAL = "zixflow_normal"
         private const val CHANNEL_NAME_NORMAL = "Zixflow Notifications (normal priority)"
+        // A second, dedicated channel used only when data["template_id"] matches
+        // EXAMPLE_TEMPLATE_ID below — demonstrates giving a specific dashboard template its
+        // own bespoke renderer, built from every field that template defines, instead of
+        // falling back to the generic field-driven renderer below.
+        private const val CHANNEL_ID_TEMPLATE_EXAMPLE = "zixflow_template_example"
+        private const val CHANNEL_NAME_TEMPLATE_EXAMPLE = "Template Example"
+        // A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+        // swap in your own template's ID to try this against a template you control.
+        private const val EXAMPLE_TEMPLATE_ID = "469935"
         const val EXTRA_DEEPLINK = "deeplink_url"
         const val EXTRA_CLICK_ACTION = "click_action"
 
@@ -193,6 +202,16 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
     ) {
         ensureNotificationChannels()
 
+        // template_id — the dashboard-assigned ID of the template used to send this push
+        // (Push Notifications → Templates list). Lets the app recognize a specific template
+        // and give it a bespoke renderer instead of the generic field-driven one below.
+        when (data["template_id"]) {
+            EXAMPLE_TEMPLATE_ID -> {
+                showTemplateExampleNotification(title, body, data, deliveryId, deliveryToken)
+                return
+            }
+        }
+
         val imageBitmap = downloadBitmap(data["image_url"])
         val largeIconBitmap = downloadBitmap(data["large_icon_url"])
         val badgeCount = data["badge"]?.toIntOrNull()
@@ -277,6 +296,77 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
+    /**
+     * Example bespoke renderer for one specific dashboard template (see [EXAMPLE_TEMPLATE_ID])
+     * — since a template's fields are known ahead of time (from the dashboard's template
+     * editor), the app can build a fully custom layout using every one of them, rather than
+     * the generic "handle whatever fields happen to be present" renderer above. Registering
+     * more templates is just adding more `when` branches in [showNotification] plus one
+     * function like this per template.
+     */
+    private fun showTemplateExampleNotification(
+        title: String,
+        body: String,
+        data: Map<String, String>,
+        deliveryId: String,
+        deliveryToken: String
+    ) {
+        val imageBitmap = downloadBitmap(data["image_url"])
+        val largeIconBitmap = downloadBitmap(data["large_icon_url"])
+        val badgeCount = data["badge"]?.toIntOrNull()
+        val soundName = data["sound"]
+        val sticky = data["sticky"]?.toBooleanStrictOrNull() ?: false
+        val notificationId = System.currentTimeMillis().toInt()
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID_TEMPLATE_EXAMPLE)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(getColor(R.color.notification_accent))
+            .setAutoCancel(true)
+            .setOngoing(sticky)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+
+        if (largeIconBitmap != null) builder.setLargeIcon(largeIconBitmap)
+        builder.setStyle(
+            if (imageBitmap != null) {
+                NotificationCompat.BigPictureStyle()
+                    .bigPicture(imageBitmap)
+                    .bigLargeIcon(null as Bitmap?)
+                    .setBigContentTitle(title)
+                    .setSummaryText(body)
+            } else {
+                NotificationCompat.BigTextStyle().bigText(body)
+            }
+        )
+        if (badgeCount != null) builder.setNumber(badgeCount)
+        if (!soundName.isNullOrEmpty() && soundName != "default" && soundName != "none") {
+            builder.setSound(android.net.Uri.parse("android.resource://$packageName/raw/$soundName"))
+        }
+
+        builder.setContentIntent(
+            buildContentPendingIntent(deliveryId, deliveryToken, data["deeplink_url"], data["click_action"])
+        )
+        PushActionButtons.attachFromRawData(
+            deliveryId = deliveryId,
+            deliveryToken = deliveryToken,
+            actionButtonsJson = data["action_buttons"],
+            notificationId = notificationId,
+            builder = builder,
+            context = this
+        )
+        NotificationManagerCompat.from(this).notify(notificationId, builder.build())
+
+        val ttlSeconds = data["ttl_seconds"]?.toIntOrNull()
+        if (ttlSeconds != null && ttlSeconds > 0) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                NotificationManagerCompat.from(this).cancel(notificationId)
+            }, ttlSeconds * 1000L)
+        }
+
+        data["analytics_label"]?.let { Log.i(TAG, "Diagnostics — analytics_label: $it (template_id=$EXAMPLE_TEMPLATE_ID)") }
+    }
+
     /** Opens [MainActivity], which tracks the Opened metric and resolves click_action/deeplink on launch. */
     private fun buildContentPendingIntent(
         deliveryId: String,
@@ -318,6 +408,15 @@ class CustomFirebaseMessagingService : FirebaseMessagingService() {
                         CHANNEL_NAME_NORMAL,
                         NotificationManager.IMPORTANCE_DEFAULT
                     ).apply { description = "Zixflow push notifications (data.priority = normal)" }
+                )
+            }
+            if (manager.getNotificationChannel(CHANNEL_ID_TEMPLATE_EXAMPLE) == null) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID_TEMPLATE_EXAMPLE,
+                        CHANNEL_NAME_TEMPLATE_EXAMPLE,
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply { description = "Example template-specific renderer (template_id=$EXAMPLE_TEMPLATE_ID)" }
                 )
             }
         }

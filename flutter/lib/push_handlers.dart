@@ -33,6 +33,15 @@ const String _androidChannelName = 'Zixflow Notifications';
 // hint) observable in the custom-handled path.
 const String _androidChannelIdNormal = 'zixflow_normal';
 const String _androidChannelNameNormal = 'Zixflow Notifications (normal priority)';
+// A second, dedicated channel used only when data['template_id'] matches
+// _exampleTemplateId below — demonstrates giving a specific dashboard template its own
+// bespoke renderer, built from every field that template defines, instead of falling
+// back to the generic field-driven renderer below.
+const String _androidChannelIdTemplateExample = 'zixflow_template_example';
+const String _androidChannelNameTemplateExample = 'Template Example';
+// A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+// swap in your own template's ID to try this against a template you control.
+const String _exampleTemplateId = '469935';
 
 // Persisted (not just in-memory) so the background isolate — which does NOT
 // share Dart statics with the main isolate — can read the same value the user
@@ -126,7 +135,6 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
   await Zixflow.initialize(
     config: ZixflowConfig(
       apiKey: AppConfig.zixflowApiKey,
-      apiHost: AppConfig.zixflowApiHost,
     ),
   );
   _handleNotificationResponse(response);
@@ -540,6 +548,14 @@ Future<void> _showLocalNotification(
   data['title'] ??= title;
   data['body'] ??= body;
 
+  // template_id — the dashboard-assigned ID of the template used to send this push
+  // (Push Notifications → Templates list). Lets the app recognize a specific template
+  // and give it a bespoke renderer instead of the generic field-driven one below.
+  if (data['template_id']?.toString() == _exampleTemplateId) {
+    await _showTemplateExampleNotification(plugin, message, data, title, body);
+    return;
+  }
+
   final imageUrl = data['image_url']?.toString();
   final largeIconUrl = data['large_icon_url']?.toString();
   final soundName = data['sound']?.toString();
@@ -660,6 +676,82 @@ Future<void> _showLocalNotification(
       plugin.cancel(id);
       debugPrint('[PushHandlers] Notification $id auto-cancelled after ttl_seconds=$ttlSeconds');
     });
+  }
+}
+
+/// Example bespoke renderer for one specific dashboard template (see [_exampleTemplateId])
+/// — since a template's fields are known ahead of time (from the dashboard's template
+/// editor), the app can build a fully custom layout using every one of them, rather than
+/// the generic "handle whatever fields happen to be present" renderer above. Registering
+/// more templates is just adding more `if` branches in [_showLocalNotification] plus one
+/// function like this per template.
+Future<void> _showTemplateExampleNotification(
+  FlutterLocalNotificationsPlugin plugin,
+  RemoteMessage message,
+  Map<String, dynamic> data,
+  String title,
+  String body,
+) async {
+  final id = message.hashCode;
+  final imagePath = await _downloadToTempFile(data['image_url']?.toString(), 'template_img_$id.jpg');
+  final largeIconPath = await _downloadToTempFile(data['large_icon_url']?.toString(), 'template_icon_$id.jpg');
+  final soundName = data['sound']?.toString();
+  final badgeCount = int.tryParse(data['badge']?.toString() ?? '');
+  final sticky = data['sticky']?.toString() == 'true';
+
+  final buttons = parseActionButtons(data['action_buttons']);
+  final androidActions = <AndroidNotificationAction>[
+    for (var i = 0; i < buttons.length && i < 2; i++)
+      AndroidNotificationAction(
+        'ACTION_$i',
+        buttons[i]['name']?.toString() ?? 'Action ${i + 1}',
+        showsUserInterface: true,
+      ),
+  ];
+
+  await plugin.show(
+    id,
+    title,
+    body,
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        _androidChannelIdTemplateExample,
+        _androidChannelNameTemplateExample,
+        channelDescription: 'Example template-specific renderer (template_id=$_exampleTemplateId)',
+        icon: 'ic_notification',
+        color: const Color(0xFFFA2438),
+        importance: Importance.high,
+        priority: Priority.high,
+        actions: androidActions,
+        largeIcon: largeIconPath != null ? FilePathAndroidBitmap(largeIconPath) : null,
+        styleInformation: imagePath != null
+            ? BigPictureStyleInformation(FilePathAndroidBitmap(imagePath), contentTitle: title, summaryText: body)
+            : BigTextStyleInformation(body),
+        playSound: soundName != null && soundName != 'default' && soundName != 'none',
+        sound: soundName != null && soundName != 'default' && soundName != 'none'
+            ? RawResourceAndroidNotificationSound(soundName)
+            : null,
+        number: badgeCount,
+        autoCancel: true,
+        ongoing: sticky,
+      ),
+      iOS: DarwinNotificationDetails(
+        categoryIdentifier: 'ZX_2BTN',
+        badgeNumber: badgeCount,
+        attachments: imagePath != null ? [DarwinNotificationAttachment(imagePath)] : null,
+      ),
+    ),
+    payload: jsonEncode(data),
+  );
+
+  final ttlSeconds = int.tryParse(data['ttl_seconds']?.toString() ?? '');
+  if (ttlSeconds != null && ttlSeconds > 0) {
+    Future.delayed(Duration(seconds: ttlSeconds), () => plugin.cancel(id));
+  }
+
+  final analyticsLabel = data['analytics_label']?.toString();
+  if (analyticsLabel != null) {
+    debugPrint('[PushHandlers] Diagnostics — analytics_label: $analyticsLabel (template_id=$_exampleTemplateId)');
   }
 }
 

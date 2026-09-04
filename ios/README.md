@@ -107,3 +107,7 @@ iOS is fundamentally different from Android/Flutter/RN here: almost all of these
 
 Without this step, `aps.sound` referencing a name with no matching bundled file **silently falls back to the default system sound** — there's no error, no crash, just the default tone playing instead.
 
+### Template-based custom rendering (`template_id`)
+
+When a customer creates a notification template in the Zixflow dashboard (Push Notifications → Templates), the template gets a unique **Template ID** (shown in the templates list) that's automatically included as `data.template_id` on every push sent from it. Since iOS's default banner comes from `aps.alert` (server-side), the bespoke per-template rendering happens in the **Notification Service Extension**: `NotificationService.didReceive` checks `userInfo["template_id"]` and, for `"template_id": "469935"`, calls `applyTemplateExampleCustomization(to:userInfo:)` — which applies `data.badge` directly, since that's one of the template's known fields and most others (`large_icon_url`, `sticky`, `action_buttons`) have no client-side equivalent on iOS — before the generic image-attachment logic runs. `AppDelegate`'s `willPresent` also logs `template_id` diagnostically (foreground-only; the NSE is what actually runs while the device is locked). See [Template-Based Custom Rendering](../../event-module-docs/10-push-notification-endtoend.md#template-based-custom-rendering-template_id) for the full pattern and per-platform code.
+

@@ -25,6 +25,10 @@ final class NotificationService: UNNotificationServiceExtension {
     private var contentHandler: ((UNNotificationContent) -> Void)?
     private var bestAttemptContent: UNMutableNotificationContent?
 
+    // A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+    // swap in your own template's ID to try this against a template you control.
+    private let exampleTemplateId = "469935"
+
     override func didReceive(
         _ request: UNNotificationRequest,
         withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
@@ -35,6 +39,16 @@ final class NotificationService: UNNotificationServiceExtension {
 
         // Runs even when the device is locked — the only place iOS lets us record Delivered on arrival.
         trackDelivered(userInfo: request.content.userInfo)
+
+        // template_id — the dashboard-assigned ID of the template used to send this push.
+        // Since a template's fields are known ahead of time (from the dashboard's template
+        // editor), the extension can apply a fully custom treatment using every one of them,
+        // instead of the generic image-only enrichment below. Registering more templates is
+        // just adding more cases to this `if`.
+        if let templateId = request.content.userInfo["template_id"] as? String,
+           templateId == exampleTemplateId {
+            applyTemplateExampleCustomization(to: content, userInfo: request.content.userInfo)
+        }
 
         guard let imageURLString = request.content.userInfo["image_url"] as? String,
               let imageURL = URL(string: imageURLString) else {
@@ -56,6 +70,16 @@ final class NotificationService: UNNotificationServiceExtension {
     override func serviceExtensionTimeWillExpire() {
         if let contentHandler, let bestAttemptContent {
             contentHandler(bestAttemptContent)
+        }
+    }
+
+    /// Example customization for one specific dashboard template (see [exampleTemplateId])
+    /// — applies `data.badge` (one of that template's known fields) directly, since iOS's
+    /// `aps.badge` is otherwise set server-side and most of the template's other fields
+    /// (large_icon_url, sticky, action_buttons) have no client-side equivalent on iOS.
+    private func applyTemplateExampleCustomization(to content: UNMutableNotificationContent, userInfo: [AnyHashable: Any]) {
+        if let badgeString = userInfo["badge"] as? String, let badgeValue = Int(badgeString) {
+            content.badge = NSNumber(value: badgeValue)
         }
     }
 

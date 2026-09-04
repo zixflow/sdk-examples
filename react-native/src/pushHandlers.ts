@@ -38,6 +38,14 @@ const ANDROID_CHANNEL_NAME = 'Zixflow Notifications';
 // delivery timing, not anything visible — this channel makes the difference observable
 // in the custom-handled path).
 const ANDROID_CHANNEL_ID_NORMAL = 'zixflow_normal';
+// A second, dedicated channel used only when data.template_id matches
+// EXAMPLE_TEMPLATE_ID below — demonstrates giving a specific dashboard template its own
+// bespoke renderer, built from every field that template defines, instead of falling
+// back to the generic field-driven renderer below.
+const ANDROID_CHANNEL_ID_TEMPLATE_EXAMPLE = 'zixflow_template_example';
+// A real Template ID from the Zixflow dashboard (Push Notifications → Templates) —
+// swap in your own template's ID to try this against a template you control.
+const EXAMPLE_TEMPLATE_ID = '469935';
 // Bundled at android/app/src/main/res/raw/notification_tone.wav — reference it in a
 // test payload as `"sound": "notification_tone"` to hear a real custom sound (a synthesized
 // two-tone chime, not a licensed asset, safe to ship in this demo).
@@ -180,6 +188,15 @@ async function showNotification(
     message.notification?.title ?? titleFromData ?? 'Notification';
   const body = message.notification?.body ?? bodyFromData ?? '';
 
+  // template_id — the dashboard-assigned ID of the template used to send this push
+  // (Push Notifications → Templates list). Lets the app recognize a specific template
+  // and give it a bespoke renderer instead of the generic field-driven one below.
+  const templateId = getStringField(data, 'template_id');
+  if (templateId === EXAMPLE_TEMPLATE_ID) {
+    await showTemplateExampleNotification(data, title, body);
+    return;
+  }
+
   const soundName =
     soundFromData && soundFromData !== 'default' && soundFromData !== 'none'
       ? soundFromData
@@ -267,6 +284,65 @@ async function showNotification(
     console.log(
       `[PushHandlers] Diagnostics — ttl(server): ${ttl}, priority: ${priorityFromData ?? '(unset)'}, analytics_label: ${analyticsLabel ?? '(unset)'}`,
     );
+  }
+}
+
+/**
+ * Example bespoke renderer for one specific dashboard template (see EXAMPLE_TEMPLATE_ID)
+ * — since a template's fields are known ahead of time (from the dashboard's template
+ * editor), the app can build a fully custom layout using every one of them, rather than
+ * the generic "handle whatever fields happen to be present" renderer above. Registering
+ * more templates is just adding more branches in `showNotification` plus one function
+ * like this per template.
+ */
+async function showTemplateExampleNotification(
+  data: NotificationData,
+  title: string,
+  body: string,
+) {
+  const largeIconUrl = getStringField(data, 'large_icon_url');
+  const imageUrl = getStringField(data, 'image_url');
+  const soundFromData = getStringField(data, 'sound');
+  const soundName =
+    soundFromData && soundFromData !== 'default' && soundFromData !== 'none' ? soundFromData : undefined;
+  const badgeFromData = getStringField(data, 'badge');
+  const badgeCount = badgeFromData != null ? Number.parseInt(badgeFromData, 10) : undefined;
+  const sticky = getStringField(data, 'sticky') === 'true';
+
+  const notificationId = await notifee.displayNotification({
+    title,
+    body,
+    data,
+    android: {
+      channelId: ANDROID_CHANNEL_ID_TEMPLATE_EXAMPLE,
+      importance: AndroidImportance.HIGH,
+      smallIcon: 'ic_notification',
+      pressAction: { id: 'default' },
+      actions: buildNotifeeActions(data),
+      ...(isValidImageUrl(largeIconUrl) ? { largeIcon: largeIconUrl } : {}),
+      ...(isValidImageUrl(imageUrl) ? { style: { type: AndroidStyle.BIGPICTURE, picture: imageUrl } } : {}),
+      ...(soundName ? { sound: soundName } : {}),
+      autoCancel: true,
+      ongoing: sticky,
+    },
+    ios: {
+      categoryId: 'ZX_2BTN',
+      ...(soundName ? { sound: soundName } : {}),
+      ...(badgeCount != null ? { badgeCount } : {}),
+    },
+  });
+
+  const ttlSecondsFromData = getStringField(data, 'ttl_seconds');
+  if (ttlSecondsFromData) {
+    const ttlSeconds = Number.parseInt(ttlSecondsFromData, 10);
+    if (!Number.isNaN(ttlSeconds) && ttlSeconds > 0) {
+      setTimeout(() => notifee.cancelNotification(notificationId).catch(() => {}), ttlSeconds * 1000);
+    }
+  }
+
+  const analyticsLabel = getStringField(data, 'analytics_label');
+  if (analyticsLabel) {
+    console.log(`[PushHandlers] Diagnostics — analytics_label: ${analyticsLabel} (template_id=${EXAMPLE_TEMPLATE_ID})`);
   }
 }
 
@@ -457,6 +533,12 @@ export const PushHandlers = {
         id: ANDROID_CHANNEL_ID_NORMAL,
         name: 'Zixflow Notifications (Normal)',
         importance: AndroidImportance.DEFAULT,
+      });
+      // Used only for the template_id === EXAMPLE_TEMPLATE_ID demo renderer.
+      await notifee.createChannel({
+        id: ANDROID_CHANNEL_ID_TEMPLATE_EXAMPLE,
+        name: 'Template Example',
+        importance: AndroidImportance.HIGH,
       });
     }
 
