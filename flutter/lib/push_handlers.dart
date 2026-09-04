@@ -135,7 +135,6 @@ Future<void> _notificationTapBackground(NotificationResponse response) async {
   await Zixflow.initialize(
     config: ZixflowConfig(
       apiKey: AppConfig.zixflowApiKey,
-      apiHost: AppConfig.zixflowApiHost,
     ),
   );
   _handleNotificationResponse(response);
