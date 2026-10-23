@@ -40,6 +40,8 @@ Future<void> main() async {
   final config = ZixflowConfig(
     apiKey: AppConfig.zixflowApiKey,
     logLevel: LogLevel.debug,
+    apiHost: AppConfig.zixflowApiHost,
+    cdnHost: AppConfig.zixflowCdnHost,
     locationConfig: AppConfig.enableLocation
         ? LocationConfig(trackingMode: LocationTrackingMode.manual)
         : null,

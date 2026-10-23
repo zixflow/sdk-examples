@@ -8,6 +8,12 @@ import {
 
 const writeKey = import.meta.env.VITE_ZIXFLOW_WRITE_KEY
 
+// This write key is scoped to the dev workspace, not the production cdp.zixflow.com
+// host (same environment as the Android/iOS samples). subscribeToPush/unsubscribeFromPush
+// don't inherit the webPush config passed to AnalyticsBrowser.load, so this must be passed
+// to every call site separately.
+const webPushHostOptions = { apiHost: 'dev-events.zixflow.in/v1', protocol: 'https' as const }
+
 function postUserIdToServiceWorker(userId: string) {
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({
@@ -47,9 +53,14 @@ export default function App() {
     void (async () => {
       try {
         const [analytics] = await AnalyticsBrowser.load(
-          { writeKey },
           {
+            writeKey,
+            cdnURL: 'https://dev-events.zixflow.in',
+          },
+          {
+            integrations: { Zixflow: webPushHostOptions },
             webPush: {
+              ...webPushHostOptions,
               enabled: true,
               swUrl: '/sw.js',
               autoSubscribe: false,
@@ -140,6 +151,74 @@ export default function App() {
     }
   }, [log])
 
+  const screen = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await analytics.screen('Dashboard', { user_type: 'premium' })
+      log('screen: Dashboard')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
+  const group = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await analytics.group('company-123', {
+        name: 'Acme Inc',
+        plan: 'enterprise',
+        employees: 100,
+      })
+      log('group: company-123')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
+  const alias = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await analytics.alias('user@example.com')
+      log('alias: anonymous -> user@example.com')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
+  const reset = useCallback(async () => {
+    const analytics = analyticsRef.current
+    if (!analytics) {
+      log('SDK not ready')
+      return
+    }
+    try {
+      await analytics.reset()
+      log('reset: user identification cleared')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      log(`Error: ${message}`)
+      console.error(err)
+    }
+  }, [log])
+
   const pushSubscribe = useCallback(async () => {
     const analytics = analyticsRef.current
     if (!analytics) {
@@ -147,7 +226,7 @@ export default function App() {
       return
     }
     try {
-      await subscribeToPush(analytics)
+      await subscribeToPush(analytics, webPushHostOptions)
       log('subscribeToPush ok')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -163,7 +242,7 @@ export default function App() {
       return
     }
     try {
-      await unsubscribeFromPush(analytics)
+      await unsubscribeFromPush(analytics, webPushHostOptions)
       log('unsubscribeFromPush ok')
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -194,6 +273,18 @@ export default function App() {
           </button>
           <button disabled={!ready} onClick={() => void page()}>
             Page
+          </button>
+          <button disabled={!ready} onClick={() => void screen()}>
+            Screen
+          </button>
+          <button disabled={!ready} onClick={() => void group()}>
+            Group
+          </button>
+          <button disabled={!ready} onClick={() => void alias()}>
+            Alias
+          </button>
+          <button className="secondary" disabled={!ready} onClick={() => void reset()}>
+            Reset
           </button>
         </div>
       </section>
