@@ -577,10 +577,10 @@ packages:
     dependency: "direct main"
     description:
       name: zixflow
-      sha256: "9b0b41a8e0926b63415af6594ec906bdf7691daf2c1259911fbc6182bb43c2dd"
+      sha256: "96b108cc3f0242687987129b008f1f7292362ef250b4ca51c2d890afb6edeff6"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.7"
+    version: "1.1.8"
 sdks:
   dart: ">=3.11.0-0 <4.0.0"
   flutter: ">=3.27.0"

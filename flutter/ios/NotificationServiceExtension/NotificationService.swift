@@ -16,7 +16,7 @@ class NotificationService: UNNotificationServiceExtension {
         print("NotificationService didReceive called")
 
         MessagingPushFCM.initializeForExtension(
-            withConfig: MessagingPushConfigBuilder(cdpApiKey: Env.cdpApiKey)
+            withConfig: MessagingPushConfigBuilder(apiKey: Env.cdpApiKey)
                 .logLevel(.debug)
                 .appGroupId("group.com.zixflow.demo")
                 .build()
